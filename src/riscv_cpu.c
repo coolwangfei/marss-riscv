@@ -599,8 +599,17 @@ int target_read_slow(RISCVCPUState *s, mem_uint_t *pval,
             return 0;
         } else if (pr->is_ram) {
             tlb_idx = (addr >> PG_SHIFT) & (TLB_SIZE - 1);
+            // pr->phys_mem is the pointer of the memory region from tinyemu's
+            // point of view. TinyEMU can use the pointer directly.
+            // pr->addr is the start physical address from the VM's point of view.
+            // paddr - pr->addr is the offset of the paddr in the memory region.
+            // The end result ptr is a pointer that can be used by TinyEMU directly
+            // to access the memory addressed by VM's paddr.
             ptr = pr->phys_mem + (uintptr_t)(paddr - pr->addr);
             s->tlb_read[tlb_idx].vaddr = addr & ~PG_MASK;
+            // The mem_addend is the difference between ptr (a TinyEMU pointer) and
+            // addr (a VM's virtual address). It can be used to translate a VM's VA
+            // to the corresponding TinyEMU's pointer quickly.
             s->tlb_read[tlb_idx].mem_addend = (uintptr_t)ptr - addr;
             s->tlb_read[tlb_idx].guest_paddr = paddr & ~PG_MASK;
             switch(size_log2) {

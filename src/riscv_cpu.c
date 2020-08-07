@@ -607,10 +607,11 @@ int target_read_slow(RISCVCPUState *s, mem_uint_t *pval,
             // to access the memory addressed by VM's paddr.
             ptr = pr->phys_mem + (uintptr_t)(paddr - pr->addr);
             s->tlb_read[tlb_idx].vaddr = addr & ~PG_MASK;
-            // The mem_addend is the difference between ptr (a TinyEMU pointer) and
-            // addr (a VM's virtual address). It can be used to translate a VM's VA
-            // to the corresponding TinyEMU's pointer quickly.
-            // ptr -addr cancle the page offset eache other. As a result, mem_addend is quick reference to TinyEmu's ram 
+            // ptr - addr cancels the page offsets of ptr and addr. Thus, mem_addend
+            // is the difference between ptr (a TinyEMU pointer) and addr (a VM's
+            // virtual address) for the page covered by the TLB entry.
+            // mem_addend can be used to translate a VM's VA to the corresponding
+            // TinyEMU's pointer quickly.
             s->tlb_read[tlb_idx].mem_addend = (uintptr_t)ptr - addr;
             s->tlb_read[tlb_idx].guest_paddr = paddr & ~PG_MASK;
             switch(size_log2) {

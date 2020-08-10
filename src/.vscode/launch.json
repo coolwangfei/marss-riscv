@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/marss-riscv ",    //当前目录下编译后的可执行文件
-            "args": ["-mem-model", "base", "marss-riscv-images/config.cfg"], 
+            "args": ["-mem-model", "base", "../test/config.cfg"], 
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",    //表示当前目录
             "environment": [],

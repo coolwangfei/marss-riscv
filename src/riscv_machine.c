@@ -307,7 +307,7 @@ void uart_rx_data(VirtMachine *v, uint8_t *buf, int size)
 static uint32_t htif_read(void *opaque, uint32_t offset,
                           int size_log2)
 {
-    RISCVMachine *s = opaque;
+    RISCVMachine *s = (RISCVMachine *)opaque;
     uint32_t val;
 
     assert(size_log2 == 2);
@@ -356,7 +356,7 @@ static void htif_handle_cmd(RISCVMachine *s)
 static void htif_write(void *opaque, uint32_t offset, uint32_t val,
                        int size_log2)
 {
-    RISCVMachine *s = opaque;
+    RISCVMachine *s = (RISCVMachine *)opaque;
 
     assert(size_log2 == 2);
     switch(offset) {
@@ -400,7 +400,7 @@ static void htif_poll(RISCVMachine *s)
 
 static uint32_t clint_read(void *opaque, uint32_t offset, int size_log2)
 {
-    RISCVMachine *m = opaque;
+    RISCVMachine *m = (RISCVMachine *)opaque;
     uint32_t val;
 
     assert(size_log2 == 2);
@@ -427,7 +427,7 @@ static uint32_t clint_read(void *opaque, uint32_t offset, int size_log2)
 static void clint_write(void *opaque, uint32_t offset, uint32_t val,
                       int size_log2)
 {
-    RISCVMachine *m = opaque;
+    RISCVMachine *m = (RISCVMachine *)opaque;
 
     assert(size_log2 == 2);
     switch(offset) {
@@ -464,7 +464,7 @@ static void plic_update_mip(RISCVMachine *s)
 
 static uint32_t plic_read(void *opaque, uint32_t offset, int size_log2)
 {
-    RISCVMachine *s = opaque;
+    RISCVMachine *s = (RISCVMachine *)opaque;
     uint32_t val, mask;
     int i;
     assert(size_log2 == 2);
@@ -493,7 +493,7 @@ static uint32_t plic_read(void *opaque, uint32_t offset, int size_log2)
 static void plic_write(void *opaque, uint32_t offset, uint32_t val,
                        int size_log2)
 {
-    RISCVMachine *s = opaque;
+    RISCVMachine *s = (RISCVMachine *)opaque;
     
     assert(size_log2 == 2);
     switch(offset) {
@@ -511,7 +511,7 @@ static void plic_write(void *opaque, uint32_t offset, uint32_t val,
 
 static void plic_set_irq(void *opaque, int irq_num, int state)
 {
-    RISCVMachine *s = opaque;
+    RISCVMachine *s = (RISCVMachine *)opaque;
     uint32_t mask;
 
     mask = 1 << (irq_num - 1);
@@ -575,7 +575,7 @@ typedef struct {
 static FDTState *fdt_init(void)
 {
     FDTState *s;
-    s = mallocz(sizeof(*s));
+    s = (FDTState *)mallocz(sizeof(*s));
     return s;
 }
 
@@ -584,7 +584,7 @@ static void fdt_alloc_len(FDTState *s, int len)
     int new_size;
     if (unlikely(len > s->tab_size)) {
         new_size = max_int(len, s->tab_size * 3 / 2);
-        s->tab = realloc(s->tab, new_size * sizeof(uint32_t));
+        s->tab = (uint32_t *)realloc(s->tab, new_size * sizeof(uint32_t));
         s->tab_size = new_size;
     }
 }
@@ -642,7 +642,7 @@ static int fdt_get_string_offset(FDTState *s, const char *name)
     new_len = s->string_table_len + name_size;
     if (new_len > s->string_table_size) {
         new_size = max_int(new_len, s->string_table_size * 3 / 2);
-        s->string_table = realloc(s->string_table, new_size);
+        s->string_table = (char *)realloc(s->string_table, new_size);
         s->string_table_size = new_size;
     }
     pos = s->string_table_len;
@@ -657,7 +657,7 @@ static void fdt_prop(FDTState *s, const char *prop_name,
     fdt_put32(s, FDT_PROP);
     fdt_put32(s, data_len);
     fdt_put32(s, fdt_get_string_offset(s, prop_name));
-    fdt_put_data(s, data, data_len);
+    fdt_put_data(s, (const uint8_t *)data, data_len);
 }
 
 static void fdt_prop_tab_u32(FDTState *s, const char *prop_name,
@@ -721,7 +721,7 @@ static void fdt_prop_tab_str(FDTState *s, const char *prop_name,
     }
     va_end(ap);
     
-    tab = malloc(size);
+    tab = (char *)malloc(size);
     va_start(ap, prop_name);
     size = 0;
     for(;;) {
@@ -1080,7 +1080,7 @@ static void copy_bios(RISCVMachine *s, const uint8_t *buf, int buf_len,
 static void riscv_flush_tlb_write_range(void *opaque, uint8_t *ram_addr,
                                         size_t ram_size)
 {
-    RISCVMachine *s = opaque;
+    RISCVMachine *s = (RISCVMachine *)opaque;
     riscv_cpu_flush_tlb_write_range_ram(s->cpu_state, ram_addr, ram_size);
 }
 
@@ -1107,7 +1107,7 @@ static VirtMachine *riscv_machine_init(const VirtMachineParams *p)
         return NULL;
     }
     
-    s = mallocz(sizeof(*s));
+    s = (RISCVMachine *)mallocz(sizeof(*s));
     s->common.vmc = p->vmc;
     s->ram_size = p->ram_size;
     s->max_xlen = max_xlen;
@@ -1199,7 +1199,7 @@ static VirtMachine *riscv_machine_init(const VirtMachineParams *p)
 
     if (p->display_device) {
         FBDevice *fb_dev;
-        fb_dev = mallocz(sizeof(*fb_dev));
+        fb_dev = (FBDevice *)mallocz(sizeof(*fb_dev));
         s->common.fb_dev = fb_dev;
         if (!strcmp(p->display_device, "simplefb")) {
             simplefb_init(s->mem_map,

@@ -56,11 +56,11 @@ bht_init(const SimParams *p)
 {
     Bht *b;
 
-    b = calloc(1, sizeof(Bht));
+    b = (Bht *)calloc(1, sizeof(Bht));
     assert(b);
 
     b->bht_size = p->bht_size;
-    b->bht_entry = calloc(b->bht_size, sizeof(BhtEntry));
+    b->bht_entry = (BhtEntry *)calloc(b->bht_size, sizeof(BhtEntry));
     assert(b->bht_entry);
 
     b->bht_index_bits = GET_NUM_BITS(b->bht_size);

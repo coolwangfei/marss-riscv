@@ -46,6 +46,7 @@ CONFIG_SLIRP=y
 CROSS_PREFIX=
 EXE=
 CC=$(CROSS_PREFIX)gcc
+CXX=$(CROSS_PREFIX)g++
 STRIP=$(CROSS_PREFIX)strip
 CFLAGS=-O0 -Wall -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -MMD # wf from O2 to O0 for debug
 CFLAGS+=-D_GNU_SOURCE -DCONFIG_VERSION=\"$(shell cat VERSION)\"
@@ -131,27 +132,27 @@ riscvsim.o: $(SIM_OBJS)
 
 # Simulation statistics display utility
 stats-display: stats_display.c
-	$(CC) stats_display.c -o stats-display -lrt
+	$(CXX) stats_display.c -o stats-display -lrt
 # ===============================================================================================
 
 marss-riscv$(EXE): $(SIM_OBJ_FILE) $(EMU_OBJS)
-	$(CC) $(LDFLAGS) -o $@ $^ $(EMU_LIBS) -L. -ldramsim_wrapper_c_connector -Wl,-rpath=.
+	$(CXX) $(LDFLAGS) -o $@ $^ $(EMU_LIBS) -L. -ldramsim_wrapper_c_connector -Wl,-rpath=.
 
 riscv_cpu.o: riscv_cpu.c
-	$(CC) $(CFLAGS) -DMAX_XLEN=$(CONFIG_XLEN) -c -o $@ $<
+	$(CXX) $(CFLAGS) -DMAX_XLEN=$(CONFIG_XLEN) -c -o $@ $<
 
 build_filelist: build_filelist.o fs_utils.o cutils.o
-	$(CC) $(LDFLAGS) -o $@ $^ -lm
+	$(CXX) $(LDFLAGS) -o $@ $^ -lm
 
 splitimg: splitimg.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 install: $(PROGS)
 	$(STRIP) $(PROGS)
 	$(INSTALL) -m755 $(PROGS) "$(DESTDIR)$(bindir)"
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CXX) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o *.d *~ $(PROGS) slirp/*.o slirp/*.d slirp/*~ riscvsim/*.o riscvsim/*.d riscvsim/*~ $(DRAMSIM2_OBJS)

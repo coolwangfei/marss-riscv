@@ -171,11 +171,11 @@ void fs_wget_end(void)
 static size_t fs_wget_write_cb(char *ptr, size_t size, size_t nmemb,
                                void *userdata)
 {
-    XHRState *s = userdata;
+    XHRState *s = (XHRState *)userdata;
     size *= nmemb;
 
     if (s->single_write) {
-        dbuf_write(&s->dbuf, s->dbuf.size, (void *)ptr, size);
+        dbuf_write(&s->dbuf, s->dbuf.size, (const uint8_t *)ptr, size);
     } else {
         s->write_cb(s->opaque, 1, ptr, size);
     }
@@ -185,7 +185,7 @@ static size_t fs_wget_write_cb(char *ptr, size_t size, size_t nmemb,
 static size_t fs_wget_read_cb(char *ptr, size_t size, size_t nmemb,
                               void *userdata)
 {
-    XHRState *s = userdata;
+    XHRState *s = (XHRState *)userdata;
     size *= nmemb;
     return s->read_cb(s->opaque, ptr, size);
 }
@@ -195,7 +195,7 @@ XHRState *fs_wget2(const char *url, const char *user, const char *password,
                    void *opaque, WGetWriteCallback *write_cb, BOOL single_write)
 {
     XHRState *s;
-    s = mallocz(sizeof(*s));
+    s = (XHRState *)mallocz(sizeof(*s));
     s->eh = curl_easy_init();
     s->opaque = opaque;
     s->write_cb = write_cb;
@@ -346,7 +346,7 @@ DecryptFileState *decrypt_file_init(AES_KEY *aes_state,
                                     void *opaque)
 {
     DecryptFileState *s;
-    s = mallocz(sizeof(*s));
+    s = (DecryptFileState *)mallocz(sizeof(*s));
     s->write_cb = write_cb;
     s->opaque = opaque;
     s->aes_state = aes_state;
@@ -444,7 +444,7 @@ typedef struct {
 static int fs_wget_file_write_cb(void *opaque, const uint8_t *data,
                                  size_t size)
 {
-    FSWGetFileState *s = opaque;
+    FSWGetFileState *s = (FSWGetFileState *)opaque;
     FSDevice *fs = s->fs;
     int ret;
 
@@ -457,7 +457,7 @@ static int fs_wget_file_write_cb(void *opaque, const uint8_t *data,
 
 static void fs_wget_file_on_load(void *opaque, int err, void *data, size_t size)
 {
-    FSWGetFileState *s = opaque;
+    FSWGetFileState *s = (FSWGetFileState *)opaque;
     FSDevice *fs = s->fs;
     int ret;
     int64_t ret_size;
@@ -468,13 +468,13 @@ static void fs_wget_file_on_load(void *opaque, int err, void *data, size_t size)
         goto done;
     } else {
         if (s->dec_state) {
-            ret = decrypt_file(s->dec_state, data, size);
+            ret = decrypt_file(s->dec_state, (const uint8_t *)data, size);
             if (ret >= 0 && err == 0) {
                 /* handle the end of file */
                 decrypt_file_flush(s->dec_state);
             }
         } else {
-            ret = fs_wget_file_write_cb(s, data, size);
+            ret = fs_wget_file_write_cb(s, (const  uint8_t *)data, size);
         }
         if (ret < 0) {
             ret_size = ret;
@@ -493,13 +493,13 @@ static void fs_wget_file_on_load(void *opaque, int err, void *data, size_t size)
 
 static size_t fs_wget_file_read_cb(void *opaque, void *data, size_t size)
 {
-    FSWGetFileState *s = opaque;
+    FSWGetFileState *s = (FSWGetFileState *)opaque;
     FSDevice *fs = s->fs;
     int ret;
     
     if (!s->posted_file)
         return 0;
-    ret = fs->fs_read(fs, s->posted_file, s->read_pos, data, size);
+    ret = fs->fs_read(fs, s->posted_file, s->read_pos, (uint8_t *)data, size);
     if (ret < 0)
         return 0;
     s->read_pos += ret;
@@ -513,7 +513,7 @@ void fs_wget_file2(FSDevice *fs, FSFile *f, const char *url,
                    AES_KEY *aes_state)
 {
     FSWGetFileState *s;
-    s = mallocz(sizeof(*s));
+    s = (FSWGetFileState *)mallocz(sizeof(*s));
     s->fs = fs;
     s->f = f;
     s->pos = 0;

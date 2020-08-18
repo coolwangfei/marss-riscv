@@ -38,7 +38,7 @@ riscv_sim_cpu_init(const SimParams *p, struct RISCVCPUState *s)
 {
     RISCVSIMCPUState *simcpu;
 
-    simcpu = calloc(1, sizeof(RISCVSIMCPUState));
+    simcpu = (RISCVSIMCPUState *)calloc(1, sizeof(RISCVSIMCPUState));
     assert(simcpu);
 
     simcpu->emu_cpu_state = s;

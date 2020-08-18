@@ -33,7 +33,9 @@ typedef enum {
     RM_RDN, /* Round Down */
     RM_RUP, /* Round Up */
     RM_RMM, /* Round to Nearest, ties to Max Magnitude */
-} RoundingModeEnum;
+} __RoundingModeEnum;
+
+typedef int RoundingModeEnum;
 
 #define FFLAG_INVALID_OP  (1 << 4)
 #define FFLAG_DIVIDE_ZERO (1 << 3)

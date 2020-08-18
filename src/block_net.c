@@ -156,7 +156,7 @@ static CachedBlock *bf_add_block(BlockDeviceHTTP *bf, unsigned int block_num)
             }
         }
     }
-    b = mallocz(sizeof(CachedBlock));
+    b = (CachedBlock *)mallocz(sizeof(CachedBlock));
     b->bf = bf;
     b->block_num = block_num;
     b->state = CBLOCK_LOADING;
@@ -169,13 +169,13 @@ static CachedBlock *bf_add_block(BlockDeviceHTTP *bf, unsigned int block_num)
 
 static int64_t bf_get_sector_count(BlockDevice *bs)
 {
-    BlockDeviceHTTP *bf = bs->opaque;
+    BlockDeviceHTTP *bf = (BlockDeviceHTTP *)bs->opaque;
     return bf->nb_sectors;
 }
 
 static void bf_start_load_block(BlockDevice *bs, int block_num)
 {
-    BlockDeviceHTTP *bf = bs->opaque;
+    BlockDeviceHTTP *bf = (BlockDeviceHTTP *)bs->opaque;
     char filename[1024];
     CachedBlock *b;
     b = bf_add_block(bf, block_num);
@@ -201,7 +201,7 @@ static void bf_start_load_prefetch_group(BlockDevice *bs, int group_num,
                                          const int *tab_block_num,
                                          int n_block_num)
 {
-    BlockDeviceHTTP *bf = bs->opaque;
+    BlockDeviceHTTP *bf = (BlockDeviceHTTP *)bs->opaque;
     CachedBlock *b;
     PrefetchGroupRequest *req;
     char filename[1024];
@@ -209,7 +209,7 @@ static void bf_start_load_prefetch_group(BlockDevice *bs, int group_num,
     int i;
     
     req_flag = FALSE;
-    req = malloc(sizeof(*req));
+    req = (PrefetchGroupRequest *)malloc(sizeof(*req));
     req->bf = bf;
     req->group_num = group_num;
     req->n_block_num = n_block_num;
@@ -239,7 +239,7 @@ static void bf_start_load_prefetch_group(BlockDevice *bs, int group_num,
 static void bf_prefetch_group_onload(void *opaque, int err, void *data,
                                      size_t size)
 {
-    PrefetchGroupRequest *req = opaque;
+    PrefetchGroupRequest *req = (PrefetchGroupRequest *)opaque;
     BlockDeviceHTTP *bf = req->bf;
     CachedBlock *b;
     int block_bytes, i;
@@ -261,7 +261,7 @@ static void bf_prefetch_group_onload(void *opaque, int err, void *data,
 
 static int bf_rw_async1(BlockDevice *bs, BOOL is_sync)
 {
-    BlockDeviceHTTP *bf = bs->opaque;
+    BlockDeviceHTTP *bf = (BlockDeviceHTTP *)bs->opaque;
     int offset, block_num, n, cluster_num;
     CachedBlock *b;
     Cluster *c;
@@ -300,9 +300,9 @@ static int bf_rw_async1(BlockDevice *bs, BOOL is_sync)
                         int cluster_size, cluster_offset;
                         uint8_t *buf;
                         /* allocate a new cluster */
-                        c = mallocz(sizeof(Cluster));
+                        c = (Cluster *)mallocz(sizeof(Cluster));
                         cluster_size = bf->sectors_per_cluster * 512;
-                        buf = malloc(cluster_size);
+                        buf = (uint8_t *)malloc(cluster_size);
                         file_buffer_init(&c->fbuf);
                         file_buffer_resize(&c->fbuf, cluster_size);
                         bf->clusters[cluster_num] = c;
@@ -355,7 +355,7 @@ static void bf_update_block(CachedBlock *b, const uint8_t *data)
 
 static void bf_read_onload(void *opaque, int err, void *data, size_t size)
 {
-    CachedBlock *b = opaque;
+    CachedBlock *b = (CachedBlock *)opaque;
     BlockDeviceHTTP *bf = b->bf;
 
     if (err < 0) {
@@ -364,14 +364,14 @@ static void bf_read_onload(void *opaque, int err, void *data, size_t size)
     }
     
     assert(size == bf->block_size * 512);
-    bf_update_block(b, data);
+    bf_update_block(b, (const uint8_t *)data);
 }
 
 static int bf_read_async(BlockDevice *bs,
                          uint64_t sector_num, uint8_t *buf, int n,
                          BlockDeviceCompletionFunc *cb, void *opaque)
 {
-    BlockDeviceHTTP *bf = bs->opaque;
+    BlockDeviceHTTP *bf = (BlockDeviceHTTP *)bs->opaque;
     //    printf("bf_read_async: sector_num=%" PRId64 " n=%d\n", sector_num, n);
     bf->is_write = FALSE;
     bf->sector_num = sector_num;
@@ -388,7 +388,7 @@ static int bf_write_async(BlockDevice *bs,
                           uint64_t sector_num, const uint8_t *buf, int n,
                           BlockDeviceCompletionFunc *cb, void *opaque)
 {
-    BlockDeviceHTTP *bf = bs->opaque;
+    BlockDeviceHTTP *bf = (BlockDeviceHTTP *)bs->opaque;
     //    printf("bf_write_async: sector_num=%" PRId64 " n=%d\n", sector_num, n);
     bf->is_write = TRUE;
     bf->sector_num = sector_num;
@@ -410,8 +410,8 @@ BlockDevice *block_device_init_http(const char *url,
     BlockDeviceHTTP *bf;
     char *p;
 
-    bs = mallocz(sizeof(*bs));
-    bf = mallocz(sizeof(*bf));
+    bs = (BlockDevice *)mallocz(sizeof(*bs));
+    bf = (BlockDeviceHTTP *)mallocz(sizeof(*bf));
     strcpy(bf->url, url);
     /* get the path with the trailing '/' */
     p = strrchr(bf->url, '/');
@@ -438,8 +438,8 @@ BlockDevice *block_device_init_http(const char *url,
 
 static void bf_init_onload(void *opaque, int err, void *data, size_t size)
 {
-    BlockDevice *bs = opaque;
-    BlockDeviceHTTP *bf = bs->opaque;
+    BlockDevice *bs = (BlockDevice *)opaque;
+    BlockDeviceHTTP *bf = (BlockDeviceHTTP *)bs->opaque;
     int block_size_kb, block_num;
     JSONValue cfg, array;
     
@@ -449,7 +449,7 @@ static void bf_init_onload(void *opaque, int err, void *data, size_t size)
     }
 
     /* parse the disk image info */
-    cfg = json_parse_value_len(data, size);
+    cfg = json_parse_value_len((const char *)data, size);
     if (json_is_error(cfg)) {
         vm_error("error: %s\n", json_get_error(cfg));
     config_error:
@@ -479,7 +479,7 @@ static void bf_init_onload(void *opaque, int err, void *data, size_t size)
     
     bf->sectors_per_cluster = 8; /* 4 KB */
     bf->n_clusters = (bf->nb_sectors + bf->sectors_per_cluster - 1) / bf->sectors_per_cluster;
-    bf->clusters = mallocz(sizeof(bf->clusters[0]) * bf->n_clusters);
+    bf->clusters = (Cluster **)mallocz(sizeof(bf->clusters[0]) * bf->n_clusters);
 
     if (vm_get_int_opt(cfg, "prefetch_group_len",
                        &bf->prefetch_group_len, 1) < 0)

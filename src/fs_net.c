@@ -283,7 +283,7 @@ void file_buffer_reset(FileBuffer *bs)
 int file_buffer_resize(FileBuffer *bs, size_t new_size)
 {
     uint8_t *new_data;
-    new_data = realloc(bs->data, new_size);
+    new_data = (uint8_t *)realloc(bs->data, new_size);
     if (!new_data && new_size != 0)
         return -1;
     bs->data = new_data;
@@ -414,7 +414,7 @@ static FSINode *inode_new(FSDevice *fs1, FSINodeTypeEnum type,
     FSDeviceMem *fs = (FSDeviceMem *)fs1;
     FSINode *n;
 
-    n = mallocz(sizeof(*n));
+    n = (FSINode *)mallocz(sizeof(*n));
     n->refcount = 1;
     n->open_count = 0;
     n->inode_num = fs->inode_num_alloc;
@@ -456,7 +456,7 @@ static FSDirEntry *inode_dir_add(FSDevice *fs1, FSINode *n, const char *name,
     assert(n->type == FT_DIR);
 
     name_len = strlen(name);
-    de = mallocz(sizeof(*de) + name_len + 1);
+    de = (FSDirEntry *)mallocz(sizeof(*de) + name_len + 1);
     de->inode = n1;
     memcpy(de->name, name, name_len + 1);
     dirent_size = sizeof(*de) + name_len + 1;
@@ -587,7 +587,7 @@ static FSFile *fid_create(FSDevice *fs1, FSINode *n, uint32_t uid)
 {
     FSFile *f;
 
-    f = mallocz(sizeof(*f));
+    f = (FSFile *)mallocz(sizeof(*f));
     f->inode = inode_inc_open(fs1, n);
     f->uid = uid;
     return f;
@@ -708,7 +708,7 @@ static void fs_open_end(FSOpenInfo *oi)
 
 static int fs_open_write_cb(void *opaque, const uint8_t *data, size_t size)
 {
-    FSOpenInfo *oi = opaque;
+    FSOpenInfo *oi = (FSOpenInfo *)opaque;
     size_t len;
     FSINode *n = oi->n;
     
@@ -798,7 +798,7 @@ static void fs_error_archive(FSOpenInfo *oi)
 
 static void fs_open_cb(void *opaque, int err, void *data, size_t size)
 {
-    FSOpenInfo *oi = opaque;
+    FSOpenInfo *oi = (FSOpenInfo *)opaque;
     FSINode *n = oi->n;
     
     //    printf("open_cb: err=%d size=%ld\n", err, size);
@@ -809,14 +809,14 @@ static void fs_open_cb(void *opaque, int err, void *data, size_t size)
         fs_wget_set_error(n);
     } else {
         if (oi->dec_state) {
-            if (decrypt_file(oi->dec_state, data, size) < 0)
+            if (decrypt_file(oi->dec_state, (const uint8_t *)data, size) < 0)
                 goto error;
             if (err == 0) {
                 if (decrypt_file_flush(oi->dec_state) < 0)
                     goto error;
             }
         } else {
-            fs_open_write_cb(oi, data, size);
+            fs_open_write_cb(oi, (const uint8_t *)data, size);
         }
 
         if (err == 0) {
@@ -848,7 +848,7 @@ static int fs_open_wget(FSDevice *fs1, FSINode *n, FSOpenWgetEnum open_type)
     if (file_buffer_resize(&n->u.reg.fbuf, n->u.reg.size) < 0)
         return -P9_EIO;
     n->u.reg.state = REG_STATE_LOADING;
-    oi = mallocz(sizeof(*oi));
+    oi = (FSOpenInfo *)mallocz(sizeof(*oi));
     oi->cur_pos = 0;
     oi->fs = fs1;
     oi->n = n;
@@ -1408,7 +1408,7 @@ static int fs_mknod(FSDevice *fs, FSQID *qid,
         return -P9_EINVAL;
     if (inode_search(n, name))
         return -P9_EEXIST;
-    n1 = inode_new(fs, type, mode, f->uid, gid);
+    n1 = inode_new(fs, (FSINodeTypeEnum)type, mode, f->uid, gid);
     if (type == FT_CHR || type == FT_BLK) {
         n1->u.dev.major = major;
         n1->u.dev.minor = minor;
@@ -1527,7 +1527,7 @@ FSDevice *fs_mem_init(void)
     FSDevice *fs1;
     FSINode *n;
 
-    fs = mallocz(sizeof(*fs));
+    fs = (FSDeviceMem *)mallocz(sizeof(*fs));
     fs1 = &fs->common;
 
     fs->common.fs_end = fs_mem_end;
@@ -1622,7 +1622,7 @@ static FSBaseURL *fs_net_set_base_url(FSDevice *fs1,
     assert(fs_is_net(fs1));
     bu = fs_find_base_url(fs1, base_url_id);
     if (!bu) {
-        bu = mallocz(sizeof(*bu));
+        bu = (FSBaseURL *)mallocz(sizeof(*bu));
         bu->base_url_id = strdup(base_url_id);
         bu->ref_count = 1;
         list_add_tail(&bu->link, &fs->base_url_list);
@@ -1709,7 +1709,7 @@ static int fs_net_set_url(FSDevice *fs1, FSINode *n,
 static void fs_dump_add_file(struct list_head *head, const char *name)
 {
     PreloadFile *pf;
-    pf = mallocz(sizeof(*pf));
+    pf = (PreloadFile *)mallocz(sizeof(*pf));
     pf->name = strdup(name);
     list_add_tail(&pf->link, head);
 }
@@ -1814,7 +1814,7 @@ static JSONValue json_load(const char *filename)
     fseek(f, 0, SEEK_END);
     size = ftell(f);
     fseek(f, 0, SEEK_SET);
-    buf = malloc(size + 1);
+    buf = (char *)malloc(size + 1);
     fread(buf, 1, size, f);
     fclose(f);
     val = json_parse_value_len(buf, size);
@@ -1927,7 +1927,7 @@ static int filelist_load_rec(FSDevice *fs1, const char **pp, FSINode *dir,
             fprintf(stderr, "invalid mode\n");
             return -1;
         }
-        type = mode >> 12;
+        type = (FSINodeTypeEnum)(mode >> 12);
         mode &= 0xfff;
         
         if (parse_uint32(&uid, &p) < 0) {
@@ -2130,7 +2130,7 @@ static void fs_initial_sync(FSDevice *fs,
     char buf[128];
     struct timeval tv;
     
-    s = mallocz(sizeof(*s));
+    s = (FSNetInitState *)mallocz(sizeof(*s));
     s->fs = fs;
     s->url = strdup(url);
     s->start_cb = start_cb;
@@ -2152,7 +2152,7 @@ static void fs_initial_sync(FSDevice *fs,
 
 static void head_loaded(FSDevice *fs, FSFile *f, int64_t size, void *opaque)
 {
-    FSNetInitState *s = opaque;
+    FSNetInitState *s = (FSNetInitState *)opaque;
     char *buf, *root_url, *url;
     char fname[FILEID_SIZE_MAX];
     FSFileID root_id;
@@ -2163,7 +2163,7 @@ static void head_loaded(FSDevice *fs, FSFile *f, int64_t size, void *opaque)
     if (size < 0)
         fatal_error("could not load 'head' file (HTTP error=%d)", -(int)size);
     
-    buf = malloc(size + 1);
+    buf = (char *)malloc(size + 1);
     fs->fs_read(fs, f, 0, (uint8_t *)buf, size);
     buf[size] = '\0';
     fs->fs_delete(fs, f);
@@ -2198,13 +2198,13 @@ static void head_loaded(FSDevice *fs, FSFile *f, int64_t size, void *opaque)
 
 static void filelist_loaded(FSDevice *fs, FSFile *f, int64_t size, void *opaque)
 {
-    FSNetInitState *s = opaque;
+    FSNetInitState *s = (FSNetInitState *)opaque;
     uint8_t *buf;
 
     if (size < 0)
         fatal_error("could not load file list (HTTP error=%d)", -(int)size);
     
-    buf = malloc(size + 1);
+    buf =(uint8_t *)malloc(size + 1);
     fs->fs_read(fs, f, 0, buf, size);
     buf[size] = '\0';
     fs->fs_delete(fs, f);
@@ -2229,7 +2229,7 @@ static const char *kernel_file_list[FILE_LOAD_COUNT] = {
 static void kernel_load_cb(FSDevice *fs, FSQID *qid1, int err,
                            void *opaque)
 {
-    FSNetInitState *s = opaque;
+    FSNetInitState *s = (FSNetInitState *)opaque;
     FSQID qid;
 
 #ifdef DUMP_CACHE_LOAD
@@ -2292,7 +2292,7 @@ static void preload_parse_str_old(FSDevice *fs1, const char *p)
             while (*p != '\n' && *p != '\0')
                 p++;
         } else {
-            pe = mallocz(sizeof(*pe));
+            pe = (PreloadEntry *)mallocz(sizeof(*pe));
             pe->file_id = n->u.reg.file_id;
             init_list_head(&pe->file_list);
             list_add_tail(&pe->link, &fs->preload_list);
@@ -2306,7 +2306,7 @@ static void preload_parse_str_old(FSDevice *fs1, const char *p)
                     return;
                 }
                 //                printf("  adding '%s'\n", fname);
-                pf = mallocz(sizeof(*pf));
+                pf = (PreloadFile *)mallocz(sizeof(*pf));
                 pf->name = strdup(fname);
                 list_add_tail(&pf->link, &pe->file_list); 
             }
@@ -2360,12 +2360,12 @@ static void preload_parse_str(FSDevice *fs1, const char *p)
                 while (*p != '\n' && *p != '\0')
                     p++;
             } else if (is_archive) {
-                pa = mallocz(sizeof(*pa));
+                pa = (PreloadArchive *)mallocz(sizeof(*pa));
                 pa->name = strdup(fname);
                 init_list_head(&pa->file_list);
                 list_add_tail(&pa->link, &fs->preload_archive_list);
             } else {
-                pe = mallocz(sizeof(*pe));
+                pe = (PreloadEntry *)mallocz(sizeof(*pe));
                 pe->file_id = n->u.reg.file_id;
                 init_list_head(&pe->file_list);
                 list_add_tail(&pe->link, &fs->preload_list);
@@ -2390,14 +2390,14 @@ static void preload_parse_str(FSDevice *fs1, const char *p)
                     return;
                 }
 
-                paf = mallocz(sizeof(*paf));
+                paf = (PreloadArchiveFile *)mallocz(sizeof(*paf));
                 paf->name = strdup(fname);
                 paf->file_id = file_id;
                 paf->size = size;
                 list_add_tail(&paf->link, &pa->file_list);
             } else {
                 PreloadFile *pf;
-                pf = mallocz(sizeof(*pf));
+                pf = (PreloadFile *)mallocz(sizeof(*pf));
                 pf->name = strdup(fname);
                 pf->is_archive = is_archive;
                 list_add_tail(&pf->link, &pe->file_list);
@@ -2422,7 +2422,7 @@ static int preload_parse(FSDevice *fs, const char *fname, BOOL is_new)
         return -1;
     /* transform to zero terminated string */
     size = n->u.reg.size;
-    buf = malloc(size + 1);
+    buf = (char *)malloc(size + 1);
     file_buffer_read(&n->u.reg.fbuf, 0, (uint8_t *)buf, size);
     buf[size] = '\0';
     if (is_new)
@@ -2551,7 +2551,7 @@ static int fs_cmd_xhr(FSDevice *fs, FSFile *f,
         post_data_len = 0;
     }
 
-    s = mallocz(sizeof(*s));
+    s = (CmdXHRState *)mallocz(sizeof(*s));
     s->root_fd = root_fd;
     s->fd = fd;
     s->post_fd = post_fd;
@@ -2562,7 +2562,7 @@ static int fs_cmd_xhr(FSDevice *fs, FSFile *f,
         paes_state = NULL;
     }
 
-    req = mallocz(sizeof(*req));
+    req = (FSCMDRequest *)mallocz(sizeof(*req));
     req->type = FS_CMD_XHR;
     req->reply_len = 0;
     req->xhr_state = s;
@@ -2586,7 +2586,7 @@ static int fs_cmd_xhr(FSDevice *fs, FSFile *f,
 static void fs_cmd_xhr_on_load(FSDevice *fs, FSFile *f, int64_t size,
                                void *opaque)
 {
-    CmdXHRState *s = opaque;
+    CmdXHRState *s = (CmdXHRState *)opaque;
     FSCMDRequest *req;
     int ret;
     
@@ -2719,7 +2719,7 @@ static int fs_cmd_export_file(FSDevice *fs, const char *p)
     else
         name = filename;
     /* XXX: pass the buffer to JS to avoid the allocation */
-    buf = malloc(n->u.reg.size);
+    buf = (uint8_t *)malloc(n->u.reg.size);
     file_buffer_read(&n->u.reg.fbuf, 0, buf, n->u.reg.size);
     fs_export_file(name, buf, n->u.reg.size);
     free(buf);
@@ -2754,7 +2754,7 @@ static int fs_cmd_pbkdf2(FSDevice *fs, FSFile *f, const char *p)
     if (key_len > FS_CMD_REPLY_LEN_MAX ||
         key_len == 0)
         goto fail;
-    req = mallocz(sizeof(*req));
+    req = (FSCMDRequest *)mallocz(sizeof(*req));
     req->type = FS_CMD_PBKDF2;
     req->reply_len = key_len;
     pbkdf2_hmac_sha256(pwd, pwd_len, salt, salt_len, iter, key_len,
@@ -2786,7 +2786,7 @@ static int fs_cmd_write(FSDevice *fs, FSFile *f, uint64_t offset,
     int err;
     
     /* transform into a string */
-    buf1 = malloc(buf_len + 1);
+    buf1 = (char *)malloc(buf_len + 1);
     memcpy(buf1, buf, buf_len);
     buf1[buf_len] = '\0';
     

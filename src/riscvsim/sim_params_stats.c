@@ -51,7 +51,7 @@ sim_params_init()
 {
     SimParams *p;
 
-    p = calloc(1, sizeof(SimParams));
+    p = (SimParams *)calloc(1, sizeof(SimParams));
     assert(p);
 
     int i;

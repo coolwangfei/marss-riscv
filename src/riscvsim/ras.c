@@ -34,10 +34,10 @@ ras_init(const SimParams *p)
 {
     Ras *r;
 
-    r = calloc(1, sizeof(Ras));
+    r = (Ras *)calloc(1, sizeof(Ras));
     assert(r);
 
-    r->entry = calloc(p->ras_size, sizeof(target_ulong));
+    r->entry = (target_ulong *)calloc(p->ras_size, sizeof(target_ulong));
     assert(r->entry);
 
     r->max_size = p->ras_size;

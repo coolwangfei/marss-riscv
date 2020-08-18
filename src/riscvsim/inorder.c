@@ -44,7 +44,7 @@ in_core_init(const SimParams *p, struct RISCVSIMCPUState *simcpu)
 {
     INCore *core;
 
-    core = calloc(1, sizeof(INCore));
+    core = (INCore *)calloc(1, sizeof(INCore));
     assert(core);
 
     /* Create execution units */

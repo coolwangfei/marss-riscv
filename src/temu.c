@@ -105,7 +105,7 @@ static void console_write(void *opaque, const uint8_t *buf, int len)
 
 static int console_read(void *opaque, uint8_t *buf, int len)
 {
-    STDIODevice *s = opaque;
+    STDIODevice *s = (STDIODevice *)opaque;
     int ret, i, j;
     uint8_t ch;
     
@@ -183,8 +183,8 @@ CharacterDevice *console_init(BOOL allow_ctrlc)
 
     term_init(allow_ctrlc);
 
-    dev = mallocz(sizeof(*dev));
-    s = mallocz(sizeof(*s));
+    dev = (CharacterDevice *)mallocz(sizeof(*dev));
+    s = (STDIODevice *)mallocz(sizeof(*s));
     s->stdin_fd = 0;
     /* Note: the glibc does not properly tests the return value of
        write() in printf, so some messages on stdout may be lost */
@@ -224,7 +224,7 @@ typedef struct BlockDeviceFile {
 
 static int64_t bf_get_sector_count(BlockDevice *bs)
 {
-    BlockDeviceFile *bf = bs->opaque;
+    BlockDeviceFile *bf = (BlockDeviceFile *)bs->opaque;
     return bf->nb_sectors;
 }
 
@@ -234,7 +234,7 @@ static int bf_read_async(BlockDevice *bs,
                          uint64_t sector_num, uint8_t *buf, int n,
                          BlockDeviceCompletionFunc *cb, void *opaque)
 {
-    BlockDeviceFile *bf = bs->opaque;
+    BlockDeviceFile *bf = (BlockDeviceFile *)bs->opaque;
     //    printf("bf_read_async: sector_num=%" PRId64 " n=%d\n", sector_num, n);
 #ifdef DUMP_BLOCK_READ
     {
@@ -270,7 +270,7 @@ static int bf_write_async(BlockDevice *bs,
                           uint64_t sector_num, const uint8_t *buf, int n,
                           BlockDeviceCompletionFunc *cb, void *opaque)
 {
-    BlockDeviceFile *bf = bs->opaque;
+    BlockDeviceFile *bf = (BlockDeviceFile *)bs->opaque;
     int ret;
 
     switch(bf->mode) {
@@ -289,7 +289,7 @@ static int bf_write_async(BlockDevice *bs,
                 return -1;
             for(i = 0; i < n; i++) {
                 if (!bf->sector_table[sector_num]) {
-                    bf->sector_table[sector_num] = malloc(SECTOR_SIZE);
+                    bf->sector_table[sector_num] = (uint8_t *)malloc(SECTOR_SIZE);
                 }
                 memcpy(bf->sector_table[sector_num], buf, SECTOR_SIZE);
                 sector_num++;
@@ -328,15 +328,15 @@ static BlockDevice *block_device_init(const char *filename,
     fseek(f, 0, SEEK_END);
     file_size = ftello(f);
 
-    bs = mallocz(sizeof(*bs));
-    bf = mallocz(sizeof(*bf));
+    bs = (BlockDevice *)mallocz(sizeof(*bs));
+    bf = (BlockDeviceFile *)mallocz(sizeof(*bf));
 
     bf->mode = mode;
     bf->nb_sectors = file_size / 512;
     bf->f = f;
 
     if (mode == BF_MODE_SNAPSHOT) {
-        bf->sector_table = mallocz(sizeof(bf->sector_table[0]) *
+        bf->sector_table = (uint8_t **)mallocz(sizeof(bf->sector_table[0]) *
                                    bf->nb_sectors);
     }
     
@@ -357,7 +357,7 @@ typedef struct {
 static void tun_write_packet(EthernetDevice *net,
                              const uint8_t *buf, int len)
 {
-    TunState *s = net->opaque;
+    TunState *s = (TunState *)net->opaque;
     write(s->fd, buf, len);
 }
 
@@ -365,7 +365,7 @@ static void tun_select_fill(EthernetDevice *net, int *pfd_max,
                             fd_set *rfds, fd_set *wfds, fd_set *efds,
                             int *pdelay)
 {
-    TunState *s = net->opaque;
+    TunState *s = (TunState *)net->opaque;
     int net_fd = s->fd;
 
     s->select_filled = net->device_can_write_packet(net);
@@ -379,7 +379,7 @@ static void tun_select_poll(EthernetDevice *net,
                             fd_set *rfds, fd_set *wfds, fd_set *efds,
                             int select_ret)
 {
-    TunState *s = net->opaque;
+    TunState *s = (TunState *)net->opaque;
     int net_fd = s->fd;
     uint8_t buf[2048];
     int ret;
@@ -435,14 +435,14 @@ static EthernetDevice *tun_open(const char *ifname)
     }
     fcntl(fd, F_SETFL, O_NONBLOCK);
 
-    net = mallocz(sizeof(*net));
+    net = (EthernetDevice *)mallocz(sizeof(*net));
     net->mac_addr[0] = 0x02;
     net->mac_addr[1] = 0x00;
     net->mac_addr[2] = 0x00;
     net->mac_addr[3] = 0x00;
     net->mac_addr[4] = 0x00;
     net->mac_addr[5] = 0x01;
-    s = mallocz(sizeof(*s));
+    s = (TunState *)mallocz(sizeof(*s));
     s->fd = fd;
     net->opaque = s;
     net->write_packet = tun_write_packet;
@@ -463,19 +463,19 @@ static Slirp *slirp_state;
 static void slirp_write_packet(EthernetDevice *net,
                                const uint8_t *buf, int len)
 {
-    Slirp *slirp_state = net->opaque;
+    Slirp *slirp_state = (Slirp *)net->opaque;
     slirp_input(slirp_state, buf, len);
 }
 
 int slirp_can_output(void *opaque)
 {
-    EthernetDevice *net = opaque;
+    EthernetDevice *net = (EthernetDevice *)opaque;
     return net->device_can_write_packet(net);
 }
 
 void slirp_output(void *opaque, const uint8_t *pkt, int pkt_len)
 {
-    EthernetDevice *net = opaque;
+    EthernetDevice *net = (EthernetDevice *)opaque;
     return net->device_write_packet(net, pkt, pkt_len);
 }
 
@@ -483,7 +483,7 @@ static void slirp_select_fill1(EthernetDevice *net, int *pfd_max,
                                fd_set *rfds, fd_set *wfds, fd_set *efds,
                                int *pdelay)
 {
-    Slirp *slirp_state = net->opaque;
+    Slirp *slirp_state = (Slirp *)net->opaque;
     slirp_select_fill(slirp_state, pfd_max, rfds, wfds, efds);
 }
 
@@ -491,7 +491,7 @@ static void slirp_select_poll1(EthernetDevice *net,
                                fd_set *rfds, fd_set *wfds, fd_set *efds,
                                int select_ret)
 {
-    Slirp *slirp_state = net->opaque;
+    Slirp *slirp_state = (Slirp *)net->opaque;
     slirp_select_poll(slirp_state, rfds, wfds, efds, (select_ret <= 0));
 }
 
@@ -511,7 +511,7 @@ static EthernetDevice *slirp_open(void)
         fprintf(stderr, "Only a single slirp instance is allowed\n");
         return NULL;
     }
-    net = mallocz(sizeof(*net));
+    net = (EthernetDevice *)mallocz(sizeof(*net));
 
     slirp_state = slirp_init(restricted, net_addr, mask, host, vhostname,
                              "", bootfile, dhcp, dns, net);
@@ -553,7 +553,7 @@ void virt_machine_run(VirtMachine *m)
     fd_max = -1;
 #ifndef _WIN32
     if (m->console_dev && (uart_can_rx(m) || virtio_console_can_write_data(m->console_dev))) {
-        STDIODevice *s = m->console->opaque;
+        STDIODevice *s = (STDIODevice *)m->console->opaque;
         stdin_fd = s->stdin_fd;
         FD_SET(stdin_fd, &rfds);
         fd_max = stdin_fd;

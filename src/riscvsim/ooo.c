@@ -37,7 +37,7 @@ oo_core_init(const SimParams *p, struct RISCVSIMCPUState *simcpu)
 {
     OOCore *core;
 
-    core = calloc(1, sizeof(OOCore));
+    core = (OOCore *)calloc(1, sizeof(OOCore));
     assert(core);
 
     /* Create ROB */

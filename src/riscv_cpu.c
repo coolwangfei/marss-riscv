@@ -128,7 +128,7 @@ static char *reg_name[32] = {
 static void dump_regs(RISCVCPUState *s)
 {
     int i, cols;
-    const char priv_str[4] = "USHM";
+    const char priv_str[5] = "USHM";
     cols = 256 / MAX_XLEN;
     printf("pc =");
     print_target_ulong(s->pc);
@@ -1577,7 +1577,7 @@ static RISCVCPUState *glue(riscv_cpu_init, MAX_XLEN)(PhysMemoryMap *mem_map, con
 #ifdef USE_GLOBAL_STATE
     s = &riscv_cpu_global_state;
 #else
-    s = mallocz(sizeof(*s));
+    s = (RISCVCPUState *)mallocz(sizeof(*s));
 #endif
     s->common.class_ptr = &glue(riscv_cpu_class, MAX_XLEN);
     s->sim_params = (SimParams *)p;

@@ -1,0 +1,4 @@
+#!/bin/bash
+riscv64-unknown-elf-gcc -nostdinc -nostdlib --entry main bare.c -o bare
+riscv64-unknown-elf-objcopy -O binary bare bare.bin
+

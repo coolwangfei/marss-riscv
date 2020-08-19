@@ -224,7 +224,6 @@ oo_core_run(void *core_type)
         oo_core_issue(core);
         oo_core_dispatch(core);
         oo_core_decode(core);
-        oo_core_fetch(core);
 
         /* Advance CPU clock */
         ++core->simcpu->clock;

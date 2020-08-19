@@ -114,7 +114,7 @@ CFLAGS+=-DCONFIG_RISCV_MAX_XLEN=64
 # Objects needed by the simulator
 
 # For DRAMSim2
-libdramsim_wrapper_c_connector.so:
+libdramsim_wrapper_c_connector.so: libdramsim_wrapper_cpp_lib.so
 	$(CXX) -g -DMAX_XLEN=$(CONFIG_XLEN) -fpic -shared -o libdramsim_wrapper_c_connector.so riscvsim/dramsim_wrapper_c_connector.cpp -I./DRAMSim2 -L. -ldramsim_wrapper_cpp_lib -Wl,-rpath=. -std=c++11
 
 libdramsim_wrapper_cpp_lib.so:

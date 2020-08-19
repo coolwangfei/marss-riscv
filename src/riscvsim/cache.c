@@ -28,10 +28,10 @@
  * THE SOFTWARE.
  */
 #include <assert.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cmath>
 
 #include "cache.h"
 
@@ -547,8 +547,9 @@ create_cache(CacheTypes type, CacheLevels level, uint32_t blks, uint32_t ways,
 
     /* Included set bits again in the tag bits */
     c->tag_bits = (sizeof(target_ulong) * 8) - c->word_bits;
-    c->tag_bits_mask = (target_ulong)(pow(2, sizeof(target_ulong) * 8) - 1)
-                       << c->word_bits;
+    c->tag_bits_mask = (target_ulong)(pow(2, sizeof(target_ulong) * 8));
+    c->tag_bits_mask--;
+    c->tag_bits_mask <<= c->word_bits;
     c->max_tag_val = (1 << c->tag_bits);
 
     c->read_latency = read_latency;

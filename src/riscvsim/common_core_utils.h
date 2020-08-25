@@ -100,6 +100,9 @@ IMapEntry *get_imap_entry(IMapEntry *imap, int index);
 int code_tlb_access_and_ins_fetch(struct RISCVCPUState *s, IMapEntry *e);
 void do_fetch_stage_exec(struct RISCVCPUState *s, IMapEntry *e);
 
+void duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e);
+
+
 void do_decode_stage_exec(struct RISCVCPUState *s, IMapEntry *e);
 
 void set_exception_state(struct RISCVCPUState *s, const IMapEntry *e);

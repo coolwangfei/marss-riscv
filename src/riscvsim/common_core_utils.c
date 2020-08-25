@@ -190,6 +190,18 @@ exception:
     return -1;
 }
 
+void 
+duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e)
+{
+    /*
+    1:Fetch from main mem directly; call code_tlb_access_and_ins_fetch
+    2: call read cache, L0 L1 cache visiting included and get latency.
+    3: if VA cache Miss:  
+    
+    */
+}
+
+
 void
 do_fetch_stage_exec(RISCVCPUState *s, IMapEntry *e)
 {
@@ -206,7 +218,6 @@ do_fetch_stage_exec(RISCVCPUState *s, IMapEntry *e)
      * in fetch stage so far */
     e->current_latency = 1;
     s->simcpu->mmu->mem_controller->frontend_mem_access_queue.cur_size = 0;
-
     /* Fetch instruction from TinyEMU memory map */
     if (code_tlb_access_and_ins_fetch(s, e))
     {

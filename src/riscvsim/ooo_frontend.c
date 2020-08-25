@@ -61,11 +61,13 @@ oo_core_fetch(OOCore *core)
             core->fetch.imap_index = e->imap_index;
 
             do_fetch_stage_exec(s, e);
+            duowen_fetch_stage_exec(s,e);
             core->fetch.stage_exec_done = TRUE;
         }
         else
         {
             e = get_imap_entry(s->simcpu->imap, core->fetch.imap_index);
+            //update_latency
         }
 
         if (e->current_latency == e->max_latency)

@@ -47,7 +47,7 @@ typedef struct PendingMemAccessEntry
     int stage_queue_index;
     int stage_queue_type;
     MemAccessType type;
-} PendingMemAccessEntry;
+}PendingMemAccessEntry;
 
 typedef struct StageMemAccessQueue
 {

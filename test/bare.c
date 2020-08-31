@@ -10,6 +10,10 @@ int main(void)
     a++;
     b++;
     int c = a + b;
+    c++;
+    int e;
+    e=a*b;
+    b=e/c;
     SE();
     return c;
 }

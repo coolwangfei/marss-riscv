@@ -122,6 +122,7 @@ void oo_core_issue(OOCore *core);
 void oo_core_dispatch(OOCore *core);
 void oo_core_decode(OOCore *core);
 void oo_core_fetch(OOCore *core);
+void duowen_core_fetch(OOCore *core);
 
 /*----------  Out of order core utility functions  ----------*/
 void oo_process_branch(OOCore *core, IMapEntry *e);

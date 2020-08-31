@@ -99,6 +99,15 @@ riscv_sim_cpu_init(const SimParams *p, struct RISCVCPUState *s)
             simcpu->pfn_core_free = oo_core_free;
             break;
         }
+        case CORE_TYPE_DUOWEN:
+        {
+            PRINT_INIT_MSG("Setting up DUOWEN core");
+            simcpu->core = (void *)oo_core_init(simcpu->params, simcpu);
+            simcpu->pfn_core_reset = oo_core_reset;
+            simcpu->pfn_core_run = oo_core_run;
+            simcpu->pfn_core_free = oo_core_free;
+            break;
+        }
     }
 
     sim_params_print(p);

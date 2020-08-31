@@ -191,14 +191,19 @@ exception:
 }
 
 void 
-duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e)
+duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e[ISSUE_WIDTH])
 {
-    /*
-    1:Fetch from main mem directly; call code_tlb_access_and_ins_fetch
-    2: call read cache, L0 L1 cache visiting included and get latency.
-    3: if VA cache Miss:  
-    
-    */
+   /* Set default minimum page walk latency. If the page walk does occur,
+     * hw_pg_tb_wlk_latency will be higher than this default value because it
+     * will also include the cache lookup latency for reading/writing page table
+     * entries. Page table entries are looked up in L1 data cache. */
+    s->hw_pg_tb_wlk_latency = 1;
+    s->hw_pg_tb_wlk_stage_id = FETCH;
+    s->ins_tlb_lookup_accounted = FALSE;
+    s->ins_tlb_hit_accounted = FALSE;
+
+
+
 }
 
 

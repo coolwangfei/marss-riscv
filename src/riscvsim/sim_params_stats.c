@@ -253,6 +253,19 @@ sim_params_print(const SimParams *p)
         fprintf(stderr, " \x1B[32m*\x1B[0m %-30s : %d\n", "lsq_size",
                 p->lsq_size);
     }
+    else if (p->core_type == CORE_TYPE_DUOWEN)
+    {
+        fprintf(stderr, " \x1B[32m*\x1B[0m %-30s : %d\n", "iq_size",
+                p->iq_size);
+        fprintf(stderr, " \x1B[32m*\x1B[0m %-30s : %d\n", "iq_issue_ports",
+                p->iq_issue_ports);
+        fprintf(stderr, " \x1B[32m*\x1B[0m %-30s : %d\n", "rob_size",
+                p->rob_size);
+        fprintf(stderr, " \x1B[32m*\x1B[0m %-30s : %d\n", "rob_commit_ports",
+                p->rob_commit_ports);
+        fprintf(stderr, " \x1B[32m*\x1B[0m %-30s : %d\n", "lsq_size",
+                p->lsq_size);
+    }
     fprintf(stderr, "\n");
 
     print_fu_config("num_alu_stages", "alu_stage_latencies", p->num_alu_stages,

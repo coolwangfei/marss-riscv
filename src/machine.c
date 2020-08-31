@@ -459,7 +459,10 @@ static int virt_machine_parse_config(VirtMachineParams *p,
             p->sim_params->core_type = CORE_TYPE_INCORE;
         } else if (strcmp(str, "oocore") == 0){
             p->sim_params->core_type = CORE_TYPE_OOCORE;
+        } else if (strcmp(str, "duowen") == 0){
+            p->sim_params->core_type = CORE_TYPE_DUOWEN;
         }
+
     }
 
     if (p->sim_params->core_type == CORE_TYPE_INCORE) {
@@ -486,6 +489,37 @@ static int virt_machine_parse_config(VirtMachineParams *p,
         }
 
     } else if (p->sim_params->core_type == CORE_TYPE_OOCORE) {
+        tag_name = "iq_size";
+        if (vm_get_int(cfg, tag_name, &p->sim_params->iq_size) < 0) {
+            fprintf(stderr, "%s not found, selecting default value: %d\n",
+                    tag_name, p->sim_params->iq_size);
+        }
+
+        tag_name = "iq_issue_ports";
+        if (vm_get_int(cfg, tag_name, &p->sim_params->iq_issue_ports) < 0) {
+            fprintf(stderr, "%s not found, selecting default value: %d\n",
+                    tag_name, p->sim_params->iq_issue_ports);
+        }
+
+        tag_name = "rob_size";
+        if (vm_get_int(cfg, tag_name, &p->sim_params->rob_size) < 0) {
+            fprintf(stderr, "%s not found, selecting default value: %d\n",
+                    tag_name, p->sim_params->rob_size);
+        }
+
+        tag_name = "rob_commit_ports";
+        if (vm_get_int(cfg, tag_name, &p->sim_params->rob_commit_ports) < 0) {
+            fprintf(stderr, "%s not found, selecting default value: %d\n",
+                    tag_name, p->sim_params->rob_commit_ports);
+        }
+
+
+        tag_name = "lsq_size";
+        if (vm_get_int(cfg, tag_name, &p->sim_params->lsq_size) < 0) {
+            fprintf(stderr, "%s not found, selecting default value: %d\n",
+                    tag_name, p->sim_params->lsq_size);
+        }
+    } else if (p->sim_params->core_type == CORE_TYPE_DUOWEN) {
         tag_name = "iq_size";
         if (vm_get_int(cfg, tag_name, &p->sim_params->iq_size) < 0) {
             fprintf(stderr, "%s not found, selecting default value: %d\n",

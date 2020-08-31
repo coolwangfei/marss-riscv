@@ -32,6 +32,9 @@
 #ifndef _RISCV_SIM_MACROS_H_
 #define _RISCV_SIM_MACROS_H_
 
+/*Duowen Defines*/
+#define ISSUE_WIDTH 4
+
 /* Type of Functional Units */
 #define FU_ALU 0x0
 #define FU_MUL 0x1

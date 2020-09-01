@@ -188,6 +188,7 @@ sim_params_init()
     assert(p->dramsim_stats_dir);
 
     p->flush_sim_mem = DEF_FLUSH_SIM_MEM;
+    p->issue_width = ISSUE_WIDTH;
     return p;
 }
 

@@ -79,6 +79,7 @@ typedef struct OOCore
     CPUStage fetch;
     CPUStage decode;
     CPUStage dispatch;
+    FetchStage duowen_fetch;
 
     /*----------  Rename Tables  ----------*/
     RenameTableEntry *int_rat;

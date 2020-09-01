@@ -123,7 +123,6 @@
 #define PG_SHIFT 12
 #define PG_MASK ((1 << PG_SHIFT) - 1)
 #define TLB_SIZE (s->sim_params->tlb_size)
-
 #define START_SIM_TIMER(start) clock_gettime(CLOCK_MONOTONIC, &start)
 #define STOP_SIM_TIMER(end) clock_gettime(CLOCK_MONOTONIC, &end)
 #define GET_SIM_TIMER_DIFF(start, end)                                             \

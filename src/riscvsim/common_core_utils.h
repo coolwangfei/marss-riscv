@@ -86,14 +86,15 @@ typedef struct CPUStage
 //duowen new type
 typedef struct FetchStage
 {
-    /*keep below 3 data member in order*/
+    /*keep below 3 data members in order*/
     uint32_t has_data;
     int imap_index;
     uint32_t stage_exec_done;
     //duowen addon 
     target_ulong pc;
     IMapEntry *fetch_group[ISSUE_WIDTH];
-    int latency;
+    int max_latency;
+    int current_latency;
 } FetchStage;
 
 typedef struct SimTracePacket
@@ -115,8 +116,8 @@ IMapEntry *get_imap_entry(IMapEntry *imap, int index);
 int code_tlb_access_and_ins_fetch(struct RISCVCPUState *s, IMapEntry *e);
 void do_fetch_stage_exec(struct RISCVCPUState *s, IMapEntry *e);
 
-void duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e[ISSUE_WIDTH]);
 
+void duowen_fetch_stage_exec (struct RISCVCPUState *s, FetchStage dw_fetch);
 
 void do_decode_stage_exec(struct RISCVCPUState *s, IMapEntry *e);
 

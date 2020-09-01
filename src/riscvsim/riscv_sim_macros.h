@@ -35,6 +35,7 @@
 /*Duowen Defines*/
 #define ISSUE_WIDTH 4
 
+
 /* Type of Functional Units */
 #define FU_ALU 0x0
 #define FU_MUL 0x1

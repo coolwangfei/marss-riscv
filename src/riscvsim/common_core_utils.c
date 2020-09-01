@@ -190,8 +190,9 @@ exception:
     return -1;
 }
 
+
 void 
-duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e[ISSUE_WIDTH])
+duowen_fetch_stage_exec (struct RISCVCPUState *s, FetchStage dw_fetch)
 {
    /* Set default minimum page walk latency. If the page walk does occur,
      * hw_pg_tb_wlk_latency will be higher than this default value because it
@@ -201,6 +202,7 @@ duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e[ISSUE_WIDTH])
     s->hw_pg_tb_wlk_stage_id = FETCH;
     s->ins_tlb_lookup_accounted = FALSE;
     s->ins_tlb_hit_accounted = FALSE;
+    dw_fetch.current_latency = 1;
 
 
 

@@ -550,6 +550,13 @@ static int virt_machine_parse_config(VirtMachineParams *p,
             fprintf(stderr, "%s not found, selecting default value: %d\n",
                     tag_name, p->sim_params->lsq_size);
         }
+
+        tag_name = "issue_width";
+        if (vm_get_int(cfg, tag_name, &p->sim_params->issue_width) < 0) {
+            fprintf(stderr, "%s not found, selecting default value: %d\n",
+                    tag_name, p->sim_params->issue_width);
+        }
+
     }
 
     tag_name = "sim_stats_path";

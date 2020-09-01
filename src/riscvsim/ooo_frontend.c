@@ -41,30 +41,30 @@ duowen_core_fetch(OOCore *core)
     RISCVCPUState *s;
     int i=0;
     s = core->simcpu->emu_cpu_state;   
-    if (core->fetch.has_data)
+    if (core->duowen_fetch.has_data)
     {
-        if (!core->fetch.stage_exec_done)
+        if (!core->duowen_fetch.stage_exec_done)
         {
             /* Calculate current PC for a fetch group*/
             s->simcpu->pc
                 = (target_ulong)((uintptr_t)s->code_ptr + s->code_to_pc_addend);
     
-            core->fetch.pc= s->simcpu->pc;
+            core->duowen_fetch.pc= s->simcpu->pc;
             for(i=0;i<ISSUE_WIDTH;i++)
             {
                e[i]=allocate_imap_entry(s->simcpu->imap);
                e[i]->ins.pc = (s->simcpu->pc+(4*i));
                e[i]->ins.create_str = s->sim_params->create_ins_str;
-               core->fetch.fetch_group[i]= e[i];
+               core->duowen_fetch.fetch_group[i]= e[i];
             }
-            duowen_fetch_stage_exec(s,core->fetch.fetch_group);
-            core->fetch.stage_exec_done = TRUE;
+            duowen_fetch_stage_exec(s,core->duowen_fetch);
+            core->duowen_fetch.stage_exec_done = TRUE;
         }
         else
         {
             for(i=0;i<ISSUE_WIDTH;i++)
             {
-               e[i]=get_imap_entry(s->simcpu->imap, core->fetch.fetch_group[i]->imap_index);
+               e[i]=get_imap_entry(s->simcpu->imap, core->duowen_fetch.fetch_group[i]->imap_index);
                
             }
         }
@@ -81,7 +81,6 @@ oo_core_fetch(OOCore *core)
 {
     IMapEntry *e;
     RISCVCPUState *s;
-
 
     s = core->simcpu->emu_cpu_state;
     if (core->fetch.has_data)

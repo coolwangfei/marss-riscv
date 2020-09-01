@@ -309,6 +309,9 @@ typedef struct SimParams
 
     /* Flag to control clearing out of caches on every new simulation run */
     int flush_sim_mem;
+    /*duowen*/
+    int issue_width;
+
 } SimParams;
 
 typedef struct SimStats

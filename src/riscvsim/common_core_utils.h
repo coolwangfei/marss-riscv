@@ -117,7 +117,7 @@ int code_tlb_access_and_ins_fetch(struct RISCVCPUState *s, IMapEntry *e);
 void do_fetch_stage_exec(struct RISCVCPUState *s, IMapEntry *e);
 
 
-void duowen_fetch_stage_exec (struct RISCVCPUState *s, FetchStage dw_fetch);
+void duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e);
 
 void do_decode_stage_exec(struct RISCVCPUState *s, IMapEntry *e);
 

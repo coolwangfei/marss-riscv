@@ -311,6 +311,7 @@ typedef struct SimParams
     int flush_sim_mem;
     /*duowen*/
     int issue_width;
+    int fetch_latency;
 
 } SimParams;
 

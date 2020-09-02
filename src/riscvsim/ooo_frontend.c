@@ -37,10 +37,16 @@
 void
 duowen_core_fetch(OOCore *core)
 {
-    IMapEntry *e[ISSUE_WIDTH];
+    int issue_width =core->simcpu->params->issue_width;
+    int fetch_latency= core->simcpu->params->fetch_latency;
+    IMapEntry *e[issue_width];
+    FetchStage *dwfetch; 
     RISCVCPUState *s;
     int i=0;
     s = core->simcpu->emu_cpu_state;   
+    dwfetch= &core->duowen_fetch;
+    dwfetch->max_latency = fetch_latency;
+    dwfetch->current_latency=1;  
     if (core->duowen_fetch.has_data)
     {
         if (!core->duowen_fetch.stage_exec_done)
@@ -50,24 +56,67 @@ duowen_core_fetch(OOCore *core)
                 = (target_ulong)((uintptr_t)s->code_ptr + s->code_to_pc_addend);
     
             core->duowen_fetch.pc= s->simcpu->pc;
-            for(i=0;i<ISSUE_WIDTH;i++)
-            {
+            dwfetch->pc = s->simcpu->pc;
+            for(i=0;i<issue_width;i++)
+            {  // for compressed 
                e[i]=allocate_imap_entry(s->simcpu->imap);
-               e[i]->ins.pc = (s->simcpu->pc+(4*i));
+               e[i]->ins.pc = (target_ulong)((uintptr_t)s->code_ptr + s->code_to_pc_addend);
                e[i]->ins.create_str = s->sim_params->create_ins_str;
                core->duowen_fetch.fetch_group[i]= e[i];
+               duowen_fetch_stage_exec(s,e[i]);
             }
-            duowen_fetch_stage_exec(s,core->duowen_fetch);
             core->duowen_fetch.stage_exec_done = TRUE;
+        }
+        
+
+         if (dwfetch->current_latency == dwfetch->max_latency)
+        {
+            /* Number of CPU cycles spent by this instruction in fetch stage
+             * equals lookup delay for this instruction */
+
+            /* Check if all the dram accesses, if required for this instruction,
+             * are complete */
+            if (!s->simcpu->mmu->mem_controller->frontend_mem_access_queue
+                     .cur_size)
+            {
+                /* If the next stage is available, send this instruction to next
+                   stage, else stall fetch */
+                if (!core->decode.has_data)
+                {
+                    s->simcpu->mmu->mem_controller->frontend_mem_access_queue
+                        .cur_idx
+                        = 0;
+
+                    core->duowen_fetch.stage_exec_done = FALSE;
+                    dwfetch->max_latency = 0;
+                    dwfetch->current_latency = 0;
+                    core->decode = core->fetch;
+                    core->fetch.imap_index = -1;
+
+                    /* Stop fetching new instructions on a MMU exception */
+
+                    for(i=0;i<issue_width;i++)
+                    {  
+                        if (e[i]->ins.exception)
+                        {
+                            cpu_stage_flush(&core->fetch); 
+                            break;
+                        }
+                       
+                    }
+                        
+                    
+                }
+            }
+            else
+            {
+                ++s->simcpu->stats[s->priv].insn_mem_delay;
+            }
         }
         else
         {
-            for(i=0;i<ISSUE_WIDTH;i++)
-            {
-               e[i]=get_imap_entry(s->simcpu->imap, core->duowen_fetch.fetch_group[i]->imap_index);
-               
-            }
-        }
+            dwfetch->current_latency++;
+        }       
         
 
     }
@@ -103,7 +152,7 @@ oo_core_fetch(OOCore *core)
             core->fetch.imap_index = e->imap_index;
 
             do_fetch_stage_exec(s, e);
-          //duowen_fetch_stage_exec(s,e);
+          
             core->fetch.stage_exec_done = TRUE;
         }
         else

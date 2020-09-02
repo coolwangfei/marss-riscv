@@ -191,10 +191,11 @@ exception:
 }
 
 
+/*all the latency calculation is obsolete. This func is for fetch inst*/
 void 
-duowen_fetch_stage_exec (struct RISCVCPUState *s, FetchStage dw_fetch)
+duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e)
 {
-   /* Set default minimum page walk latency. If the page walk does occur,
+    /* Set default minimum page walk latency. If the page walk does occur,
      * hw_pg_tb_wlk_latency will be higher than this default value because it
      * will also include the cache lookup latency for reading/writing page table
      * entries. Page table entries are looked up in L1 data cache. */
@@ -202,7 +203,56 @@ duowen_fetch_stage_exec (struct RISCVCPUState *s, FetchStage dw_fetch)
     s->hw_pg_tb_wlk_stage_id = FETCH;
     s->ins_tlb_lookup_accounted = FALSE;
     s->ins_tlb_hit_accounted = FALSE;
-    dw_fetch.current_latency = 1;
+
+    /* current_latency: number of CPU cycles spent by this instruction
+     * in fetch stage so far */
+    e->current_latency = 1;
+    s->simcpu->mmu->mem_controller->frontend_mem_access_queue.cur_size = 0;
+    /* Fetch instruction from TinyEMU memory map */
+    if (code_tlb_access_and_ins_fetch(s, e))
+    {
+        /* This instruction has raised a page fault exception during
+         * fetch */
+        e->ins.exception = TRUE;
+        e->ins.exception_cause = SIM_MMU_EXCEPTION;
+
+        /* Hardware page table walk has been done and its latency must
+         * be simulated */
+        e->max_latency = s->hw_pg_tb_wlk_latency;
+    }
+    else
+    {
+        /* max_latency: Number of CPU cycles required for TLB and Cache
+         * look-up */
+        e->max_latency = s->hw_pg_tb_wlk_latency
+                         + mmu_insn_read(s->simcpu->mmu, s->code_guest_paddr, 4,
+                                         FETCH, s->priv);
+
+        if (s->sim_params->enable_l1_caches)
+        {
+            /* L1 caches and TLB are probed in parallel */
+            e->max_latency -= min_int(s->hw_pg_tb_wlk_latency,
+                                      s->simcpu->mmu->icache->read_latency);
+        }
+
+        /* Increment PC for the next instruction */
+        if (3 == (e->ins.binary & 3))
+        {
+            s->code_ptr = s->code_ptr + 4;
+            s->code_guest_paddr = s->code_guest_paddr + 4;
+        }
+        else
+        {
+            /* For compressed */
+            s->code_ptr = s->code_ptr + 2;
+            s->code_guest_paddr = s->code_guest_paddr + 2;
+        }
+
+        /* Probe the branch predictor */
+        s->simcpu->pfn_branch_frontend_probe_handler(s, e);
+
+        ++s->simcpu->stats[s->priv].ins_fetch;
+    }
 
 
 

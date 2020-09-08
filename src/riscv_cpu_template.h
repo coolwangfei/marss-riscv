@@ -34,7 +34,7 @@
 #define intx_t int32_t
 #elif XLEN == 64
 #define uintx_t uint64_t
-#define intx_t int64_t
+#define intx_t int64_t 
 #elif XLEN == 128
 #define uintx_t uint128_t
 #define intx_t int128_t

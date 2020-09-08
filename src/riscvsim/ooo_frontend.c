@@ -35,7 +35,7 @@
 ===============================================*/
 
 void
-duowen_core_fetch(OOCore *core)
+dw_core_fetch(DWCore *core)
 {
     int issue_width =core->simcpu->params->issue_width;
     int fetch_latency= core->simcpu->params->fetch_latency;
@@ -47,7 +47,9 @@ duowen_core_fetch(OOCore *core)
     dwfetch= &core->duowen_fetch;
     dwfetch->max_latency = fetch_latency;
     dwfetch->current_latency=1;  
-    if (core->duowen_fetch.has_data)
+     
+    /*has_data should be replaced by duowen_fetch.has_data when decode ready*/ 
+    if (core->duowen_fetch.has_data)//core->duowen_fetch.has_data 
     {
         if (!core->duowen_fetch.stage_exec_done)
         {
@@ -63,13 +65,13 @@ duowen_core_fetch(OOCore *core)
                e[i]->ins.pc = (target_ulong)((uintptr_t)s->code_ptr + s->code_to_pc_addend);
                e[i]->ins.create_str = s->sim_params->create_ins_str;
                core->duowen_fetch.fetch_group[i]= e[i];
-               duowen_fetch_stage_exec(s,e[i]);
+               dw_fetch_stage_exec(s,e[i]);
             }
             core->duowen_fetch.stage_exec_done = TRUE;
         }
         
 
-         if (dwfetch->current_latency == dwfetch->max_latency)
+        if (dwfetch->current_latency == dwfetch->max_latency)
         {
             /* Number of CPU cycles spent by this instruction in fetch stage
              * equals lookup delay for this instruction */
@@ -230,6 +232,50 @@ oo_core_decode(OOCore *core)
                 {
                     speculative_cpu_stage_flush(&core->fetch, s->simcpu->imap);
                     core->fetch.has_data = TRUE;
+                    core->duowen_fetch.has_data=TRUE;
+                }
+                e->is_decoded = TRUE;
+            }
+
+            /* Handle exception caused during decoding */
+            if (unlikely(e->ins.exception))
+            {
+                cpu_stage_flush(&core->fetch);
+            }
+
+            core->decode.stage_exec_done = TRUE;
+        }
+
+        if (!core->dispatch.has_data)
+        {
+            core->decode.stage_exec_done = FALSE;
+            core->dispatch = core->decode;
+            cpu_stage_flush(&core->decode);
+        }
+    }
+}
+
+void
+dw_core_decode(DWCore *core)
+{
+    IMapEntry *e;
+    RISCVCPUState *s;
+
+    s = core->simcpu->emu_cpu_state;
+    if (core->decode.has_data)
+    {
+        e = get_imap_entry(s->simcpu->imap, core->decode.imap_index);
+
+        if (!core->decode.stage_exec_done)
+        {
+            if (!e->ins.exception && !e->is_decoded)
+            {
+                do_decode_stage_exec(s, e);
+                if (s->simcpu->pfn_branch_frontend_decode_handler(s, e))
+                {
+                    speculative_cpu_stage_flush(&core->fetch, s->simcpu->imap);
+                    core->fetch.has_data = TRUE;
+                    core->duowen_fetch.has_data=TRUE;
                 }
                 e->is_decoded = TRUE;
             }
@@ -316,7 +362,28 @@ update_rd_rat_mapping(OOCore *core, IMapEntry *e)
         assert(e->ins.old_pdest != core->fp_rat[e->ins.rd].rob_idx);
     }
 }
-
+static void
+dw_update_rd_rat_mapping(DWCore *core, IMapEntry *e)
+{
+    /* INT destination */
+    if (e->ins.has_dest)
+    {
+        if (e->ins.rd)
+        {
+            e->ins.old_pdest = core->int_rat[e->ins.rd].rob_idx;
+            core->int_rat[e->ins.rd].read_from_rob = TRUE;
+            core->int_rat[e->ins.rd].rob_idx = e->rob_idx;
+            assert(e->ins.old_pdest != core->int_rat[e->ins.rd].rob_idx);
+        }
+    }
+    else if (e->ins.has_fp_dest)
+    {
+        e->ins.old_pdest = core->fp_rat[e->ins.rd].rob_idx;
+        core->fp_rat[e->ins.rd].read_from_rob = TRUE;
+        core->fp_rat[e->ins.rd].rob_idx = e->rob_idx;
+        assert(e->ins.old_pdest != core->fp_rat[e->ins.rd].rob_idx);
+    }
+}
 static int
 stall_insn_dispatch(OOCore *core, IMapEntry *e)
 {
@@ -337,7 +404,26 @@ stall_insn_dispatch(OOCore *core, IMapEntry *e)
     /* Ready to dispatch */
     return FALSE;
 }
+static int
+dw_stall_insn_dispatch(DWCore *core, IMapEntry *e)
+{
+    /* Before dispatching atomic instruction, make sure that all the prior
+     * instructions are committed */
+    if (e->ins.is_atomic && !cq_empty(&core->rob.cq))
+    {
+        return TRUE;
+    }
 
+    if (cq_full(&core->rob.cq) || iq_full(core->iq, core->simcpu->params->iq_size)
+        || ((e->ins.is_load || e->ins.is_store || e->ins.is_atomic)
+            && cq_full(&core->lsq.cq)))
+    {
+        return TRUE;
+    }
+
+    /* Ready to dispatch */
+    return FALSE;
+}
 static void
 do_insn_rename_and_read_reg_file(OOCore *core, IMapEntry *e)
 {
@@ -424,7 +510,92 @@ do_insn_rename_and_read_reg_file(OOCore *core, IMapEntry *e)
         e->read_rs3 = TRUE;
     }
 }
+static void
+dw_do_insn_rename_and_read_reg_file(DWCore *core, IMapEntry *e)
+{
+    if (e->ins.has_src1)
+    {
+        if (core->int_rat[e->ins.rs1].read_from_rob)
+        {
+            e->ins.prs1 = core->int_rat[e->ins.rs1].rob_idx;
+            assert(e->ins.prs1 != -1);
+        }
+        else
+        {
+            e->ins.rs1_val = core->simcpu->emu_cpu_state->reg[e->ins.rs1];
+            e->read_rs1 = TRUE;
+        }
+    }
+    else if (e->ins.has_fp_src1)
+    {
+        if (core->fp_rat[e->ins.rs1].read_from_rob)
+        {
+            e->ins.prs1 = core->fp_rat[e->ins.rs1].rob_idx;
+            assert(e->ins.prs1 != -1);
+        }
+        else
+        {
+            e->ins.rs1_val = core->simcpu->emu_cpu_state->fp_reg[e->ins.rs1];
+            e->read_rs1 = TRUE;
+        }
+    }
+    else
+    {
+        /* Do this, so that this instruction won't wait for rs1,
+         * while in IQ */
+        e->read_rs1 = TRUE;
+    }
 
+    if (e->ins.has_src2)
+    {
+        if (core->int_rat[e->ins.rs2].read_from_rob)
+        {
+            e->ins.prs2 = core->int_rat[e->ins.rs2].rob_idx;
+            assert(e->ins.prs2 != -1);
+        }
+        else
+        {
+            e->ins.rs2_val = core->simcpu->emu_cpu_state->reg[e->ins.rs2];
+            e->read_rs2 = TRUE;
+        }
+    }
+    else if (e->ins.has_fp_src2)
+    {
+        if (core->fp_rat[e->ins.rs2].read_from_rob)
+        {
+            e->ins.prs2 = core->fp_rat[e->ins.rs2].rob_idx;
+            assert(e->ins.prs2 != -1);
+        }
+        else
+        {
+            e->ins.rs2_val = core->simcpu->emu_cpu_state->fp_reg[e->ins.rs2];
+            e->read_rs2 = TRUE;
+        }
+    }
+    else
+    {
+        e->read_rs2 = TRUE;
+    }
+
+    /* Only FP-FMA instructions have rs3 */
+    if (e->ins.has_fp_src3)
+    {
+        if (core->fp_rat[e->ins.rs3].read_from_rob)
+        {
+            e->ins.prs3 = core->fp_rat[e->ins.rs3].rob_idx;
+            assert(e->ins.prs3 != -1);
+        }
+        else
+        {
+            e->ins.rs3_val = core->simcpu->emu_cpu_state->fp_reg[e->ins.rs3];
+            e->read_rs3 = TRUE;
+        }
+    }
+    else
+    {
+        e->read_rs3 = TRUE;
+    }
+}
 void
 oo_core_dispatch(OOCore *core)
 {
@@ -465,6 +636,54 @@ oo_core_dispatch(OOCore *core)
                     lsq_entry_create(&core->lsq, e);
                 }
                 update_rd_rat_mapping(core, e);
+            }
+            e->ins_dispatch_id = core->ins_dispatch_id++;
+            cpu_stage_flush(&core->dispatch);
+        }
+    }
+}
+
+
+void
+dw_core_dispatch(DWCore *core)
+{
+    IMapEntry *e;
+    RISCVCPUState *s;
+
+    s = core->simcpu->emu_cpu_state;
+    if (core->dispatch.has_data)
+    {
+        e = get_imap_entry(s->simcpu->imap, core->dispatch.imap_index);
+        if (!core->dispatch.stage_exec_done)
+        {
+            /* If this instruction has caused an exception, only create ROB
+             * entry for this instruction and let ROB handle this exception */
+            if (e->ins.exception)
+            {
+                if (cq_full(&core->rob.cq))
+                {
+                    /* Stall */
+                    return;
+                }
+
+                /* Mark ROB entry valid so that its processed immediately once
+                 * it becomes ROB top */
+                rob_entry_create(&core->rob, e, TRUE);
+            }
+            else
+            {
+                if (dw_stall_insn_dispatch(core, e))
+                {
+                    return;
+                }
+                dw_do_insn_rename_and_read_reg_file(core, e);
+                rob_entry_create(&core->rob, e, FALSE);
+                iq_entry_create(core->iq, s->simcpu->params->iq_size, e);
+                if (e->ins.is_load || e->ins.is_store || e->ins.is_atomic)
+                {
+                    lsq_entry_create(&core->lsq, e);
+                }
+                dw_update_rd_rat_mapping(core, e);
             }
             e->ins_dispatch_id = core->ins_dispatch_id++;
             cpu_stage_flush(&core->dispatch);

@@ -108,11 +108,51 @@ typedef struct OOCore
     struct RISCVSIMCPUState *simcpu; /* Pointer to parent */
 } OOCore;
 
+typedef struct DuoWenCore
+{
+    /*----------  Front-end stages  ----------*/
+    CPUStage fetch;
+    CPUStage decode;
+    CPUStage dispatch;
+    FetchStage duowen_fetch;
+
+    /*----------  Rename Tables  ----------*/
+    RenameTableEntry *int_rat;
+    RenameTableEntry *fp_rat;
+
+    ROB rob;                  /* Reorder buffer */
+    LSQ lsq;                  /* Load-Store Queue */
+
+    /*----------  Issue Queues  ----------*/
+    IssueQueueEntry *iq;
+
+    /*----------  Execution units  ----------*/
+    CPUStage *ialu;    /* INT ALU */
+    CPUStage *imul;    /* INT Multiplier */
+    CPUStage *idiv;    /* INT Divider */
+    CPUStage *fpu_fma; /* FP Fused Multiply Add */
+
+    CPUStage fpu_alu; /* FP ALU */
+
+    /*----------  Memory Stage  ----------*/
+    CPUStage lsu; /* Load-Store Unit unit, works with LSQ */
+
+    /* Dispatch ID for instruction */
+    uint64_t ins_dispatch_id; /* Support for speculative execution */
+
+    struct RISCVSIMCPUState *simcpu; /* Pointer to parent */
+} DWCore;
+
 /*----------  Out of order core top-level functions  ----------*/
 OOCore *oo_core_init(const SimParams *p, struct RISCVSIMCPUState *simcpu);
 void oo_core_reset(void *core_type);
 void oo_core_free(void *core_type);
 int oo_core_run(void *core_type);
+/*duowen*******************************************************/
+DWCore *dw_core_init(const SimParams *p, struct RISCVSIMCPUState *simcpu);
+void dw_core_reset(void *core_type);
+void dw_core_free(void *core_type);
+int dw_core_run(void *core_type);
 
 /*----------  Out of order stages  ----------*/
 int oo_core_rob_commit(OOCore *core);
@@ -123,7 +163,16 @@ void oo_core_issue(OOCore *core);
 void oo_core_dispatch(OOCore *core);
 void oo_core_decode(OOCore *core);
 void oo_core_fetch(OOCore *core);
-void duowen_core_fetch(OOCore *core);
+/*duowen*******************************************************/
+int dw_core_rob_commit(DWCore *core);
+void dw_core_lsq(DWCore *core);
+void dw_core_lsu(DWCore *core);
+void dw_core_execute_all(DWCore *core);
+void dw_core_issue(DWCore *core);
+void dw_core_dispatch(DWCore *core);
+void dw_core_decode(DWCore *core);
+void dw_core_fetch(DWCore *core);
+void dw_core_fetch(DWCore *core);
 
 /*----------  Out of order core utility functions  ----------*/
 void oo_process_branch(OOCore *core, IMapEntry *e);
@@ -138,4 +187,20 @@ void read_fp_operand_from_rob_slot(OOCore *core, IMapEntry *e, int asrc,
                                    int psrc, int current_rob_idx,
                                    uint64_t *buffer, int *read_flag);
 int rob_entry_committed(ROB *rob, int src_idx, int current_idx);
+
+/*duowen*******************************************************/
+void dw_process_branch(DWCore *core, IMapEntry *e);
+
+void dw_iq_reset(IssueQueueEntry *iq_entry, int size);
+int dw_iq_full(IssueQueueEntry *iq, int size);
+int dw_iq_get_free_entry(IssueQueueEntry *iq, int size);
+void dw_read_int_operand_from_rob_slot(DWCore *core, IMapEntry *e, int asrc,
+                                    int psrc, int current_rob_idx,
+                                    uint64_t *buffer, int *read_flag);
+void dw_read_fp_operand_from_rob_slot(DWCore *core, IMapEntry *e, int asrc,
+                                   int psrc, int current_rob_idx,
+                                   uint64_t *buffer, int *read_flag);
+int dw_rob_entry_committed(ROB *rob, int src_idx, int current_idx);
+
+
 #endif

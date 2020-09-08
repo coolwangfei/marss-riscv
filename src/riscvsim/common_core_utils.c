@@ -193,7 +193,7 @@ exception:
 
 /*all the latency calculation is obsolete. This func is for fetch inst*/
 void 
-duowen_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e)
+dw_fetch_stage_exec (struct RISCVCPUState *s, IMapEntry *e)
 {
     /* Set default minimum page walk latency. If the page walk does occur,
      * hw_pg_tb_wlk_latency will be higher than this default value because it

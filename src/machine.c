@@ -459,7 +459,7 @@ static int virt_machine_parse_config(VirtMachineParams *p,
             p->sim_params->core_type = CORE_TYPE_INCORE;
         } else if (strcmp(str, "oocore") == 0){
             p->sim_params->core_type = CORE_TYPE_OOCORE;
-        } else if (strcmp(str, "duowen") == 0){
+        } else if (strcmp(str, "dwcore") == 0){
             p->sim_params->core_type = CORE_TYPE_DUOWEN;
         }
 
@@ -1161,6 +1161,17 @@ static int virt_machine_parse_config(VirtMachineParams *p,
     }
 
     p->sim_params->guest_ram_size = p->ram_size >> 20;
+
+/***********************Duowen Hardcoded Param**********************************************************/
+    p->sim_params->l0i_cache_read_latency=1;
+    p->sim_params->l0i_cache_size=24;
+    p->sim_params->l0i_cache_ways=3;
+    
+    
+    p->sim_params->l1i_cache_read_latency=1;
+    p->sim_params->l1i_cache_size=64;
+    p->sim_params->l1i_cache_ways=4;
+    
 
     json_free(cfg);
     return 0;

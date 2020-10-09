@@ -518,6 +518,7 @@ is_power_of_two(int value)
     return ((value > 0) && ((value & (value - 1)) == 0));
 }
 
+//check params here felix
 void
 sim_params_validate(const SimParams *p)
 {
@@ -540,6 +541,13 @@ sim_params_validate(const SimParams *p)
         validate_param("enable_parallel_fu", 1, 0, 1, p->enable_parallel_fu);
     }
     else if (strcmp(p->core_name, "oocore") == 0)
+    {
+        validate_param("iq_size", 0, 1, 2048, p->iq_size);
+        validate_param("iq_issue_ports", 0, 1, 2048, p->iq_issue_ports);
+        validate_param("rob_size", 0, 1, 2048, p->rob_size);
+        validate_param("lsq_size", 0, 1, 2048, p->lsq_size);
+    }
+    else if (strcmp(p->core_name, "duowen") == 0)
     {
         validate_param("iq_size", 0, 1, 2048, p->iq_size);
         validate_param("iq_issue_ports", 0, 1, 2048, p->iq_issue_ports);

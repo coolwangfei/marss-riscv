@@ -51,10 +51,24 @@ riscv_sim_cpu_init(const SimParams *p, struct RISCVCPUState *s)
 
     simcpu->imap = (IMapEntry *)calloc(NUM_IMAP_ENTRY, sizeof(IMapEntry));
     assert(simcpu->imap);
+    if(p->core_type == CORE_TYPE_DUOWEN)
+    {
+        PRINT_PROG_TITLE_MSG("Micro-Architectural System Simulator for Duowen");
+        simcpu->mmu = dw_mmu_init(simcpu->params);
 
-    PRINT_PROG_TITLE_MSG("MARSS-RISCV: Micro-Architectural System Simulator for RISC-V");
-    simcpu->mmu = mmu_init(simcpu->params);
+        /*both microarch are enabled for debugging*/
+        PRINT_PROG_TITLE_MSG("MARSS-RISCV: Micro-Architectural System Simulator for RISC-V");
+        simcpu->mmu = mmu_init(simcpu->params); 
 
+    }
+    else
+    {
+        PRINT_PROG_TITLE_MSG("MARSS-RISCV: Micro-Architectural System Simulator for RISC-V");
+        simcpu->mmu = mmu_init(simcpu->params); 
+
+    }
+    
+   
     /* Seed for random eviction, if used in BPU and caches */
     srand(time(NULL));
 

@@ -582,8 +582,12 @@ int
 dw_core_run(void *core_type)
 {
     DWCore *core;
+    RISCVCPUState *s;
 
     core = (DWCore *)core_type;
+    s = core->simcpu->emu_cpu_state;  
+    core->duowen_fetch.pc
+                = (target_ulong)((uintptr_t)s->code_ptr + s->code_to_pc_addend);
     while (1)
     {
         /* Advance DRAM clock */
@@ -603,9 +607,9 @@ dw_core_run(void *core_type)
         dw_core_lsq(core);
         dw_core_execute_all(core);
         dw_core_issue(core);
-       dw_core_dispatch(core);
-       // dw_core_decode(core);
-        //dw_core_fetch(core);
+        dw_core_dispatch(core);
+        dw_core_decode(core);
+        dw_core_fetch(core);
 
         /* Advance CPU clock */
         ++core->simcpu->clock;

@@ -60,11 +60,14 @@ typedef enum CacheTypes
     InstructionCache = 0x1,
     DataCache = 0x2,
     SharedCache = 0x3,
+    LineFillBuffer= 0x4,
+    VictimCache= 0x5,
 } CacheTypes;
 
 /* Cache Levels, add levels as required */
 typedef enum CacheLevels
 {
+    L0 = 0x0,
     L1 = 0x1,
     L2 = 0x2,
     L3 = 0x3,
@@ -194,6 +197,9 @@ Cache *create_cache(CacheTypes type, CacheLevels level, uint32_t blks,
                     CacheReadAllocPolicy read_alloc_policy,
                     CacheWriteAllocPolicy write_alloc_policy,
                     MemoryController *mem_controller);
+
+
+
 void delete_cache(Cache **c);
 
 const CacheStats *const get_cache_stats(Cache *c);

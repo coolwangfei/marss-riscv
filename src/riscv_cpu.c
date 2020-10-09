@@ -599,7 +599,8 @@ int target_read_slow(RISCVCPUState *s, mem_uint_t *pval,
             return 0;
         } else if (pr->is_ram) {
             tlb_idx = (addr >> PG_SHIFT) & (TLB_SIZE - 1);
-            // pr->phys_mem is the pointer of the memory region from tinyemu's
+            //yyshen 
+            //pr->phys_mem is the pointer of the memory region from tinyemu's
             // point of view. TinyEMU can use the pointer directly.
             // pr->addr is the start physical address from the VM's point of view.
             // paddr - pr->addr is the offset of the paddr in the memory region.
@@ -1610,7 +1611,7 @@ static RISCVCPUState *glue(riscv_cpu_init, MAX_XLEN)(PhysMemoryMap *mem_map, con
     assert(s->tlb_write);
 
     tlb_init(s);
-
+    /*duowen init dwcore init add here*/
     s->simcpu = riscv_sim_cpu_init(s->sim_params, s);
 
     /* Setup shared memory to dump stats, read by stats-display tool */

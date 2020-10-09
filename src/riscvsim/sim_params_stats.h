@@ -309,9 +309,20 @@ typedef struct SimParams
 
     /* Flag to control clearing out of caches on every new simulation run */
     int flush_sim_mem;
-    /*duowen*/
+    /********************************duowen**************************************/
     int issue_width;
     int fetch_latency;
+
+    int l0i_cache_read_latency;
+    int l0i_cache_size;
+    int l0i_cache_ways;
+    
+    
+    int l1i_cache_read_latency;
+    int l1i_cache_size;
+    int l1i_cache_ways;
+    
+    
 
 } SimParams;
 

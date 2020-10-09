@@ -44,7 +44,12 @@ typedef struct MemoryManagementUnit
     int caches_enabled;
 } MMU;
 
+
 MMU *mmu_init(const SimParams *p);
+MMU *dw_mmu_init(const SimParams *p);
+
+
+
 int mmu_insn_read(MMU *mmu, target_ulong paddr, int bytes_to_read,
                   int stage_id, int priv);
 int mmu_data_read(MMU *mmu, target_ulong paddr, int bytes_to_read,
@@ -55,5 +60,7 @@ int mmu_pte_read(MMU *mmu, target_ulong paddr, int bytes_to_read, int stage_id, 
 int mmu_pte_write(MMU *mmu, target_ulong paddr, int bytes_to_write,
                   int stage_id, int priv);
 void mmu_free(MMU **mmu);
+
+
 
 #endif

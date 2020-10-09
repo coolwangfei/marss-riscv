@@ -638,6 +638,144 @@ create_cache(CacheTypes type, CacheLevels level, uint32_t blks, uint32_t ways,
     return c;
 }
 
+Cache *
+dw_create_cache(CacheTypes type, CacheLevels level, uint32_t blks, uint32_t ways,
+             int read_latency, int write_latency, Cache *next_level_cache, int words_per_blk,
+             CacheEvictionPolicy evict_policy, CacheWritePolicy write_policy,
+             CacheReadAllocPolicy read_alloc_policy,
+             CacheWriteAllocPolicy write_alloc_policy,
+             MemoryController *mem_controller)
+{
+    int i;
+    Cache *c = (Cache *)malloc(sizeof(Cache));
+
+    c->type = type;
+    c->level = level;
+    c->num_blks = blks;
+    c->num_ways = ways;
+    c->num_sets = (blks / ways);
+
+    /* Allocate memory for all cache line pointers */
+    c->blk = (CacheBlk **)calloc(c->num_sets, sizeof(CacheBlk *));
+    assert(c->blk);
+
+    /* Allocate memory to hold status bits */
+    c->status_bits = (int **)calloc(c->num_sets, sizeof(int *));
+    assert(c->status_bits);
+
+    /* Allocate memory for cache blocks */
+    for (i = 0; i < c->num_sets; ++i)
+    {
+        c->blk[i] = (CacheBlk *)calloc(c->num_ways, sizeof(CacheBlk));
+        assert(c->blk[i]);
+
+        c->status_bits[i] = (int *)calloc(c->num_ways, sizeof(int));
+        assert(c->status_bits[i]);
+    }
+
+    c->max_words_per_blk = words_per_blk;
+
+    /* No. of bits required to represent byte offset within the cache line */
+    c->word_bits = GET_NUM_BITS(32 * c->max_words_per_blk); //WORD_SIZE felix
+    /* No. of bits required to represent target set in the physical address */
+    c->set_bits = GET_NUM_BITS(c->num_sets);
+
+    /* Size of cache in KBs */
+    c->size = (c->num_blks * c->max_words_per_blk * 32) / 1024; //wORD_SIZE felix
+
+    /* Included set bits again in the tag bits */
+    c->tag_bits = (sizeof(target_ulong) * 8) - c->word_bits;
+    c->tag_bits_mask = (target_ulong)(pow(2, sizeof(target_ulong) * 8) - 1)
+                       << c->word_bits;
+    c->max_tag_val = (1 << c->tag_bits);
+
+    c->read_latency = read_latency;
+    c->write_latency = write_latency;
+    c->mem_controller = mem_controller;
+
+    c->next_level_cache = next_level_cache;
+    if (NULL == c->next_level_cache)
+    {
+        assert(c->mem_controller);
+    }
+
+    c->stats = (CacheStats *)calloc(NUM_MAX_PRV_LEVELS, sizeof(CacheStats));
+    assert(c->stats);
+
+    c->cache_evict_policy = evict_policy;
+    c->cache_write_policy = write_policy;
+    c->cache_read_alloc_policy = read_alloc_policy;
+    c->cache_write_alloc_policy = write_alloc_policy;
+
+    /* Set eviction function pointer */
+    switch (evict_policy)
+    {
+        case Random:
+        {
+            c->pfn_get_victim_index = &get_random_victim_index;
+            break;
+        }
+
+        case LRU:
+        {
+            c->pfn_get_victim_index = &get_lru_victim_index;
+            break;
+        }
+    }
+
+    /* Set write policy handler function pointer */
+    switch (write_policy)
+    {
+        case WriteBack:
+        {
+            c->pfn_write_handler = &writeback_handler;
+            c->pfn_victim_evict_handler = &writeback_victim_evict_handler;
+            break;
+        }
+
+        case WriteThrough:
+        {
+            c->pfn_write_handler = &writethrough_handler;
+            c->pfn_victim_evict_handler = &writethrough_victim_evict_handler;
+            break;
+        }
+    }
+
+    /* Set cache line allocation handler function pointer on read-miss */
+    switch (read_alloc_policy)
+    {
+        case ReadAllocate:
+        {
+            c->pfn_read_alloc_handler = &read_allocate_handler;
+            break;
+        }
+
+        case ReadNoAllocate:
+        {
+            c->pfn_read_alloc_handler = &read_no_allocate_handler;
+            break;
+        }
+    }
+
+    /* Set cache line allocation handler function pointer on write-miss */
+    switch (write_alloc_policy)
+    {
+        case WriteAllocate:
+        {
+            c->pfn_write_alloc_handler = &write_allocate_handler;
+            break;
+        }
+
+        case WriteNoAllocate:
+        {
+            c->pfn_write_alloc_handler = &write_no_allocate_handler;
+            break;
+        }
+    }
+
+    return c;
+}
+
 void
 delete_cache(Cache **c)
 {

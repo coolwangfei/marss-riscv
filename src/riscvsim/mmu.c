@@ -113,6 +113,151 @@ mmu_init(const SimParams *p)
     return mmu;
 }
 
+MMU *
+dw_mmu_init(const SimParams *p)
+{
+    MMU *mmu;
+    Cache *l0i,*l1i,*l1d,*l2,*lfb;
+    mmu = (MMU *)calloc(1, sizeof(MMU));
+    assert(mmu);
+
+    /* Setup memory controller */
+    PRINT_INIT_MSG("Setting up memory controller");
+    mmu->mem_controller = mem_controller_init(p);
+
+    mem_controller_set_dram_burst_size(mmu->mem_controller, 512); //512 64Bis LLC cache line size
+    
+    l2= create_cache(
+                SharedCache, //CacheTypes 
+                L2,               //CacheLevels level, 
+                512,                  // blks, 24K 3way; 64B line
+                4096,                 //ways,
+                15,                 //read_latency, 
+                15,                 //write_latency, 
+                NULL,                // *next_level_cache, 
+                16,                //words_per_blk,
+                LRU,               //CacheEvictionPolicy evict_policy, 
+                WriteBack,      //CacheWritePolicy write_policy,
+                ReadAllocate,      //CacheReadAllocPolicy read_alloc_policy,
+                WriteNoAllocate,   //CacheWriteAllocPolicy write_alloc_policy,
+                mmu->mem_controller);//MemoryController *mem_controller); 
+    l1d= create_cache(
+                DataCache, //CacheTypes 
+                L1,               //CacheLevels level, 
+                512,                  // blks, 24K 3way; 64B line
+                8,                 //ways,
+                2,                 //read_latency, 
+                1,                 //write_latency, 
+                l2,                // *next_level_cache, 
+                16,                //words_per_blk,
+                LRU,               //CacheEvictionPolicy evict_policy, 
+                WriteBack,      //CacheWritePolicy write_policy,
+                ReadAllocate,      //CacheReadAllocPolicy read_alloc_policy,
+                WriteNoAllocate,   //CacheWriteAllocPolicy write_alloc_policy,
+                mmu->mem_controller);//MemoryController *mem_controller);  
+
+    l1i= create_cache(
+                VictimCache, //CacheTypes 
+                L1,               //CacheLevels level, 
+                1024,                  // blks, 24K 3way; 64B line
+                8,                 //ways,
+                1,                 //read_latency, 
+                1,                 //write_latency, 
+                l2,                // *next_level_cache, 
+                16,                //words_per_blk,
+                LRU,               //CacheEvictionPolicy evict_policy, 
+                WriteBack,      //CacheWritePolicy write_policy,
+                ReadNoAllocate,      //CacheReadAllocPolicy read_alloc_policy,
+                WriteAllocate,   //CacheWriteAllocPolicy write_alloc_policy,
+                mmu->mem_controller);//MemoryController *mem_controller);  
+    
+    l0i= create_cache(
+                InstructionCache, //CacheTypes 
+                L0,               //CacheLevels level, 
+                384,                  // blks, 24K 3way; 64B line
+                3,                 //ways,
+                1,                 //read_latency, 
+                1,                 //write_latency, 
+                l1i,                // *next_level_cache, 
+                16,                //words_per_blk,
+                LRU,               //CacheEvictionPolicy evict_policy, 
+                WriteThrough,      //CacheWritePolicy write_policy,
+                ReadAllocate,      //CacheReadAllocPolicy read_alloc_policy,
+                WriteNoAllocate,   //CacheWriteAllocPolicy write_alloc_policy,
+                mmu->mem_controller);//MemoryController *mem_controller);    
+    
+    lfb= create_cache(
+                LineFillBuffer, //CacheTypes 
+                L0,               //CacheLevels level, 
+                2,                // blks, 24K 3way; 64B line
+                2,                 //ways,
+                1,                 //read_latency, 
+                1,                 //write_latency, 
+                l0i,                // *next_level_cache, 
+                16,                //words_per_blk,
+                LRU,               //CacheEvictionPolicy evict_policy, 
+                WriteBack,      //CacheWritePolicy write_policy,
+                ReadNoAllocate,      //CacheReadAllocPolicy read_alloc_policy,
+                WriteAllocate,   //CacheWriteAllocPolicy write_alloc_policy,
+                mmu->mem_controller);//MemoryController *mem_controller);                                            
+
+    mmu->caches_enabled = p->enable_l1_caches;
+
+    /* Setup caches */
+    if (p->enable_l1_caches)
+    {
+        /* If caches are enabled, set dram burst size to cache line size. If
+         * DRAMSim2 is used, its burst size must be equal to cache line size */
+        mem_controller_set_dram_burst_size(mmu->mem_controller,
+                                           p->words_per_cache_line
+                                               * sizeof(target_ulong));
+
+        if (p->enable_l2_cache)
+        {
+            PRINT_INIT_MSG("Setting up l2-shared cache");
+            mmu->l2_cache = create_cache(
+                SharedCache, L2,
+                get_num_cache_blks_from_cache_size_kb(p->l2_shared_cache_size,
+                                                      p->words_per_cache_line),
+                p->l2_shared_cache_ways, p->l2_shared_cache_read_latency,
+                p->l2_shared_cache_write_latency, NULL, p->words_per_cache_line,
+                (CacheEvictionPolicy)p->l2_shared_cache_evict,
+                (CacheWritePolicy)p->cache_write_policy,
+                (CacheReadAllocPolicy)p->cache_read_allocate_policy,
+                (CacheWriteAllocPolicy)p->cache_write_allocate_policy,
+                mmu->mem_controller);
+        }
+
+        PRINT_INIT_MSG("Setting up l1-instruction cache");
+        mmu->icache = create_cache(
+            InstructionCache, L1,
+            get_num_cache_blks_from_cache_size_kb(p->l1_code_cache_size,
+                                                  p->words_per_cache_line),
+            p->l1_code_cache_ways, p->l1_code_cache_read_latency,1,
+            mmu->l2_cache, p->words_per_cache_line,
+            (CacheEvictionPolicy)p->l1_code_cache_evict,
+            (CacheWritePolicy)p->cache_write_policy,
+            (CacheReadAllocPolicy)p->cache_read_allocate_policy,
+            (CacheWriteAllocPolicy)p->cache_write_allocate_policy,
+            mmu->mem_controller);
+
+        PRINT_INIT_MSG("Setting up l1-data cache");
+        mmu->dcache = create_cache(
+            DataCache, L1, get_num_cache_blks_from_cache_size_kb(
+                               p->l1_data_cache_size, p->words_per_cache_line),
+            p->l1_data_cache_ways, p->l1_data_cache_read_latency,
+            p->l1_data_cache_write_latency, mmu->l2_cache,
+            p->words_per_cache_line,
+            (CacheEvictionPolicy)p->l1_data_cache_evict,
+            (CacheWritePolicy)p->cache_write_policy,
+            (CacheReadAllocPolicy)p->cache_read_allocate_policy,
+            (CacheWriteAllocPolicy)p->cache_write_allocate_policy,
+            mmu->mem_controller);
+    }
+
+    return mmu;
+}
+
 /**
  * Below functions return latency required for accessing instruction/data
  * through cache hierarchy. If cache operations (cache miss, dirty victim write-back)

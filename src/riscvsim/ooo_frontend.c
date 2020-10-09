@@ -48,8 +48,8 @@ dw_core_fetch(DWCore *core)
     dwfetch->max_latency = fetch_latency;
     dwfetch->current_latency=1;  
      
-    /*has_data should be replaced by duowen_fetch.has_data when decode ready*/ 
-    if (core->duowen_fetch.has_data)//core->duowen_fetch.has_data 
+     
+    if (core->duowen_fetch.has_data)
     {
         if (!core->duowen_fetch.stage_exec_done)
         {
